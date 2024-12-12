@@ -3,6 +3,7 @@ package models
 import "net/http"
 
 type FormData struct {
+	UploadUserID      string `json:"user_id"`
 	ReportDate        string `json:"report_date"`
 	EmployeeName      string `json:"employee_name"`
 	Premises          string `json:"premises"`
@@ -19,6 +20,7 @@ type FormData struct {
 	TypeOfWork        string `json:"type_of_work"`
 	ClosingTime       string `json:"closing_time"`
 	ContactPersonName string `json:"contact_person_name"`
+	CustomerEmailID   string `json:"customer_emailid"`
 }
 type FormInterface interface {
 	ReportForm(r *http.Request) error

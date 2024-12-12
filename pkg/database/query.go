@@ -32,37 +32,39 @@ func (q *Query) RetrivePassword(email string) (models.UserModel, error) {
 }
 
 func (q *Query) StoreFile(emp_id string, filename string, filedata []byte) error {
-	_, err := q.db.Exec("INSERT INTO documents (emp_id,file_name,file_data)VALUES($1,$2)", filename, filedata)
+	_, err := q.db.Exec("INSERT INTO documents (emp_id,file_name,file_data)VALUES($1,$2,$3)", emp_id, filename, filedata)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
 func (q *Query) StoreFormData(empid string, data map[string]string) error {
 	_, err := q.db.Exec(`
-    INSERT INTO formdata(
-        emp_id, 
-        report_date, 
-        employee_name, 
-        premises, 
-        site_location, 
-        client_name, 
-        scope_of_work, 
-        work_details, 
-        joint_visits, 
-        support_needed, 
-        status_of_work, 
-        priority_of_work, 
-        next_action_plan, 
-        result, 
-        type_of_work, 
-        closing_time, 
-        contact_person_name
-    ) 
-    VALUES(
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
-    )`,
+        INSERT INTO formdata(
+			user_id,
+            emp_id, 
+            report_date, 
+            employee_name, 
+            premises, 
+            site_location, 
+            client_name, 
+            scope_of_work, 
+            work_details, 
+            joint_visits, 
+            support_needed, 
+            status_of_work, 
+            priority_of_work, 
+            next_action_plan, 
+            result, 
+            type_of_work, 
+            closing_time, 
+            contact_person_name,
+            contact_emailid
+        ) 
+        VALUES(
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,$19
+        )`,
+		data["user_id"],
 		empid,
 		data["report_date"],
 		data["employee_name"],
@@ -80,6 +82,7 @@ func (q *Query) StoreFormData(empid string, data map[string]string) error {
 		data["type_of_work"],
 		data["closing_time"],
 		data["contact_person_name"],
+		data["contact_emailid"], // Removed any potential trailing commas
 	)
 	if err != nil {
 		return err

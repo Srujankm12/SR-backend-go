@@ -17,5 +17,6 @@ func registerRouter(db *sql.DB) *mux.Router {
 	router.HandleFunc("/login", authCont.Login).Methods("POST")
 	formCont := handlers.NewFormController(repository.NewFormDataRepo(db))
 	router.HandleFunc("/submit", formCont.SubmitFormController).Methods("POST")
+	// router.HandleFunc("/getdata/{id}" , formCont.FetchFormDataController)
 	return router
 }

@@ -44,7 +44,6 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 			erChan <- err
 		}
 		dataChan1 <- file1Data
-		close(dataChan1)
 	}()
 	go func() {
 		file2, _, err := r.FormFile("file2")
@@ -57,18 +56,17 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 			erChan <- err
 		}
 		dataChan2 <- file2Data
-		close(dataChan2)
 	}()
 	if _ , ok := <-erChan; !ok {
 		return err
 	}
 	if data1 , ok := <- dataChan1; !ok {
-		return fmt.Errorf("Unable to validate data")
+		return fmt.Errorf("unable to validate data")
 	}else{
 		datas1 = data1
 	}
 	if data2 , ok := <- dataChan2; !ok {
-		return fmt.Errorf("Unable to validate data")
+		return fmt.Errorf("unable to validate data")
 	}else{
 		datas2 = data2
 	}

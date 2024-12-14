@@ -25,66 +25,88 @@ func NewFormDataRepo(db *sql.DB) *FormDataRepo {
 }
 
 func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
-	err := r.ParseMultipartForm(10 << 20)
-	var datas1 , datas2 []byte
+	// Set a max file size limit for the multipart form
+	err := r.ParseMultipartForm(10 << 20) // 10MB
 	if err != nil {
 		return errors.New("failed to parse multipart form: " + err.Error())
 	}
-	erChan := make(chan error)
-	dataChan1  := make(chan  []byte)
-	dataChan2  := make(chan  []byte)
+
+	// Create channels for errors and file data
+	erChan := make(chan error, 2) // Buffered to handle multiple errors
+	dataChan1 := make(chan []byte)
+	dataChan2 := make(chan []byte)
+
+	// Goroutine to process file1
 	go func() {
 		file1, _, err := r.FormFile("file1")
 		if err != nil {
 			erChan <- err
+			close(dataChan1) // Ensure channels are closed on error
+			return
 		}
 		defer file1.Close()
 		file1Data, err := io.ReadAll(file1)
 		if err != nil {
 			erChan <- err
+			close(dataChan1)
+			return
 		}
 		dataChan1 <- file1Data
+		close(dataChan1) // Close after sending data
 	}()
+
+	// Goroutine to process file2
 	go func() {
 		file2, _, err := r.FormFile("file2")
 		if err != nil {
 			erChan <- err
+			close(dataChan2) // Ensure channels are closed on error
+			return
 		}
 		defer file2.Close()
 		file2Data, err := io.ReadAll(file2)
 		if err != nil {
 			erChan <- err
+			close(dataChan2)
+			return
 		}
 		dataChan2 <- file2Data
+		close(dataChan2) // Close after sending data
 	}()
-	if _ , ok := <-erChan; !ok {
-		return err
+
+	// Wait for both file data or error
+	var datas1, datas2 []byte
+	var errOccurred error
+
+	// Wait for data or error from channels
+	select {
+	case errOccurred = <-erChan:
+		if errOccurred != nil {
+			return fmt.Errorf("error occurred: %v", errOccurred)
+		}
+	case datas1 = <-dataChan1:
+	case datas2 = <-dataChan2:
 	}
-	if data1 , ok := <- dataChan1; !ok {
-		return fmt.Errorf("unable to validate data")
-	}else{
-		datas1 = data1
-	}
-	if data2 , ok := <- dataChan2; !ok {
-		return fmt.Errorf("unable to validate data")
-	}else{
-		datas2 = data2
-	}
+
+	// Now we unmarshal the JSON data
 	var data models.FormData
 	err = json.Unmarshal([]byte(r.FormValue("json_data")), &data)
 	if err != nil {
 		return errors.New("failed to unmarshal JSON data: " + err.Error())
 	}
 
-	query := database.NewQuery(fdr.db)
+	// Ensure employee ID is set
 	data.EmployeeID = uuid.NewString()
 
-	err = query.StoreFile(data.UserID , data.EmployeeID , "file1" , "file2" , datas1 , datas2)
+	// Store files in the database
+	query := database.NewQuery(fdr.db)
+	err = query.StoreFile(data.UserID, data.EmployeeID, "file1", "file2", datas1, datas2)
 	if err != nil {
-		log.Println("Error storing file1:", err)
+		log.Println("Error storing files:", err)
 		return err
 	}
 
+	// Store form data in the database
 	err = query.StoreFormData(data)
 	if err != nil {
 		log.Println("Error storing form data:", err)
@@ -93,6 +115,7 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 
 	return nil
 }
+
 
 // func (fdr *FormDataRepo) FetchFormData(r *http.Request) (*map[string]string, []byte, []byte, error) {
 // 	// Parse the request parameters to get the employee ID (empID)

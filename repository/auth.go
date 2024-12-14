@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/Srujankm12/SRproject/internal/models"
@@ -49,13 +50,18 @@ func (a *Auth) Login(r *http.Request) (string, error) {
 	if err := utils.Decode(r, &reqDet); err != nil {
 		return "", nil
 	}
+	log.Println(reqDet)
 	query := database.NewQuery(a.db)
 	user, err := query.RetrivePassword(reqDet.Email)
 	if err != nil {
+		log.Println(err)
 		return "", err
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(reqDet.Password))
+	log.Println(user.Password)
+	log.Println(reqDet.Password)
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password) , []byte(reqDet.Password))
 	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 	return user.UserID, nil

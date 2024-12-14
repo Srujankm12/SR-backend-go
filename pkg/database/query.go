@@ -30,7 +30,7 @@ func (q *Query) CreateTables() error {
     		user_id VARCHAR(100) PRIMARY KEY,
     		email VARCHAR(255) NOT NULL,
     		password VARCHAR(100) NOT NULL
-		);`,
+		)`,
 		`
 		CREATE TABLE IF NOT EXISTS documents (
     		emp_id VARCHAR(100) PRIMARY KEY,
@@ -40,7 +40,7 @@ func (q *Query) CreateTables() error {
 			file_name_two VARCHAR(255) NOT NULL,
     		file_data_two BYTEA NOT NULL,
     		FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-		);
+		)
 		`,
 		`
 		CREATE TABLE IF NOT EXISTS formdata (
@@ -65,6 +65,7 @@ func (q *Query) CreateTables() error {
     			contact_emailid VARCHAR(255),
     			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
 				FOREIGN KEY (emp_id) REFERENCES documents(emp_id) ON DELETE CASCADE
+	)
 		`,
 	}
 
@@ -138,30 +139,46 @@ func (q *Query) StoreFormData(data models.FormData) error {
 	return nil
 }
 
-// func (q *Query) FetchFormData(userId string) ([]models.FormData, error) {
-// 	// Prepare a map to store the form data
-// 	formData := make(map[string]string)
+func (q *Query) FetchFormData(userId string) ([]models.FormData, error) {
+	// Prepare a map to store the form data
+	var formData models.FormData
+	var formDatas []models.FormData
 
-// 	// Query the database to fetch form data
-// 	row, err := q.db.Query(`
-// 		SELECT 
-// 			user_id, report_date, employee_name, premises, site_location, client_name,
-// 			scope_of_work, work_details, joint_visits, support_needed, status_of_work, 
-// 			priority_of_work, next_action_plan, result, type_of_work, closing_time, 
-// 			contact_person_name, contact_emailid
-// 		FROM formdata
-// 		WHERE user_id = $1
-// 	`, userId)
-// 	defer row.Close()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	for row.Next() {
+	// Query the database to fetch form data
+	row, err := q.db.Query(`
+		SELECT 
+			user_id , emp_id , report_date, employee_name, premises, site_location, client_name,
+			scope_of_work, work_details, joint_visits, support_needed, status_of_work, 
+			priority_of_work, next_action_plan, result, type_of_work, closing_time, 
+			contact_person_name, contact_emailid , type_of_work , closing_time , contact_emailid
+		FROM formdata
+		WHERE user_id = $1
+	`, userId)
 
-// 	}
+	defer func() {
+		row.Close()
+	} ()
 
-// 	return formData, nil
-// }
+	if err != nil {
+		return nil, err
+	}
+
+	for row.Next() {
+		if err := row.Scan(&formData.UserID , &formData.EmployeeID , &formData.ReportDate , &formData.EmployeeName , &formData.Premises , 
+			&formData.SiteLocation , &formData.ClientName , &formData.ScopeOfWork,&formData.WorkDetails,&formData.JointVisits,
+			&formData.SupportNeeded , &formData.StatusOfWork , &formData.PriorityOfWork,
+			&formData.NextActionPlan , &formData.Result , &formData.TypeOfWork , &formData.ClosingTime,
+			&formData.ContactPersonName , &formData.ContactEmailID , &formData.TypeOfWork , &formData.ClosingTime , &formData.ContactEmailID); err != nil {
+			return nil,err
+		}
+		formDatas = append(formDatas, formData)
+	}
+	if row.Err() != nil {
+		return nil,err
+	}
+
+	return formDatas, nil
+}
 
 // func (q *Query) FetchFile(, filename string) ([]byte, error) {
 // 	var fileData []byte

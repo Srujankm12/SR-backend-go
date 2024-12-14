@@ -12,6 +12,7 @@ import (
 	"github.com/Srujankm12/SRproject/internal/models"
 	"github.com/Srujankm12/SRproject/pkg/database"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 type FormDataRepo struct {
@@ -117,41 +118,28 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 }
 
 
-// func (fdr *FormDataRepo) FetchFormData(r *http.Request) (*map[string]string, []byte, []byte, error) {
-// 	// Parse the request parameters to get the employee ID (empID)
-// 	err := r.ParseForm()
-// 	if err != nil {
-// 		return nil, nil, nil, errors.New("failed to parse form: " + err.Error())
-// 	}
+func (fdr *FormDataRepo) FetchFormData(r *http.Request) ([]models.FormData, error) {
+	// Parse the request parameters to get the employee ID (empID)
+	// err := r.ParseForm()
+	// if err != nil {
+	// 	return nil, errors.New("failed to parse form: " + err.Error())
+	// }
 
-// 	userID := r.FormValue("user_id")
-// 	if userID == "" {
-// 		return nil, nil, nil, errors.New("employee ID is missing")
-// 	}
+	// userID := r.FormValue("user_id")
+	var userID = mux.Vars(r)["id"]
+	if userID == "" {
+		return nil, errors.New("employee ID is missing")
+	}
 
-// 	// Create a query instance to interact with the database
-// 	query := database.NewQuery(fdr.db)
+	// Create a query instance to interact with the database
+	query := database.NewQuery(fdr.db)
 
-// 	// Fetch form data
-// 	formData, err := query.FetchFormData(userID)
-// 	if err != nil {
-// 		log.Println("Error fetching form data:", err)
-// 		return nil, nil, nil, err
-// 	}
-
-// 	// Fetch files associated with the empID
-// 	file1Data, err := query.FetchFile(userID, "file1")
-// 	if err != nil {
-// 		log.Println("Error fetching file1:", err)
-// 		return nil, nil, nil, err
-// 	}
-
-// 	file2Data, err := query.FetchFile(userID, "file2")
-// 	if err != nil {
-// 		log.Println("Error fetching file2:", err)
-// 		return nil, nil, nil, err
-// 	}
-
-// 	// Return the form data, along with file contents
-// 	return &formData, file1Data, file2Data, nil
-// }
+	// Fetch form data
+	formData, err := query.FetchFormData(userID)
+	if err != nil {
+		log.Println("Error fetching form data:", err)
+		return nil, err
+	}
+	// Return the form data, along with file contents
+	return formData, nil
+}

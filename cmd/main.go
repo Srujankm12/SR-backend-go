@@ -22,7 +22,7 @@ func main() {
 	query := database.NewQuery(conn.DB)
 	err := query.CreateTables()
 	if err != nil {
-		log.Fatal("Unable to create database")
+		log.Fatal("Unable to create database %v" , err)
 	}
 	log.Printf("server is running at port %s", os.Getenv("PORT"))
 	err = server.ListenAndServe()

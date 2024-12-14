@@ -26,5 +26,5 @@ type FormData struct {
 
 type FormInterface interface {
 	SubmitFormData(r *http.Request) error
-	// FetchFormData(r *http.Request) (*map[string]string, []byte, []byte, error)
+	FetchFormData(r *http.Request) ([]FormData, error)
 }

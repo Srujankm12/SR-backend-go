@@ -117,7 +117,6 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 	return nil
 }
 
-
 func (fdr *FormDataRepo) FetchFormData(r *http.Request) ([]models.FormData, error) {
 	// Parse the request parameters to get the employee ID (empID)
 	// err := r.ParseForm()
@@ -135,7 +134,7 @@ func (fdr *FormDataRepo) FetchFormData(r *http.Request) ([]models.FormData, erro
 	query := database.NewQuery(fdr.db)
 
 	// Fetch form data
-	formData, err := query.FetchFormData(userID)
+	formData, err := query.FetchFormData()
 	if err != nil {
 		log.Println("Error fetching form data:", err)
 		return nil, err

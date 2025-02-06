@@ -59,7 +59,7 @@ func (a *Auth) Login(r *http.Request) (string, error) {
 	}
 	log.Println(user.Password)
 	log.Println(reqDet.Password)
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password) , []byte(reqDet.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(reqDet.Password))
 	if err != nil {
 		log.Println(err)
 		return "", err

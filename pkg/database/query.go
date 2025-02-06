@@ -42,6 +42,13 @@ func (q *Query) CreateTables() error {
     		FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 		)
 		`,
+		`CREATE TABLE IF NOT EXISTS admin (
+    		admin_id VARCHAR(100) PRIMARY KEY,
+    		admin_email VARCHAR(255) NOT NULL,  
+    		admin_password VARCHAR(100) NOT NULL
+		)
+		`,
+
 		`
 		CREATE TABLE IF NOT EXISTS formdata (
     			user_id VARCHAR(100) NOT NULL,
@@ -69,8 +76,8 @@ func (q *Query) CreateTables() error {
 		`,
 	}
 
-	for _ , j := range queries{
-		_ ,err = tx.Exec(j)
+	for _, j := range queries {
+		_, err = tx.Exec(j)
 		if err != nil {
 			return err
 		}
@@ -84,6 +91,33 @@ func (q *Query) Register(userid, email, password string) error {
 	}
 	return nil
 }
+func (q *Query) Login(email string) (models.UserModel, error) {
+	var user models.UserModel
+	if err := q.db.QueryRow("SELECT user_id,email,password FROM users WHERE email = $1", email).Scan(&user.UserID, &user.Email, &user.Password); err != nil {
+		return user, err
+	}
+	return user, nil
+}
+func (q *Query) AdminRegister(adminId, adminEmail, adminPassword string) error {
+	if _, err := q.db.Exec("INSERT INTO admin(admin_id,admin_email,admin_password) VALUES($1,$2,$3)", adminId, adminEmail, adminPassword); err != nil {
+		return err
+	}
+	return nil
+}
+func (q *Query) AdminLogin(adminEmail string) (models.Adminmodel, error) {
+	var admin models.Adminmodel
+	if err := q.db.QueryRow("SELECT admin_id,admin_email,admin_password FROM admin WHERE admin_email = $1", adminEmail).Scan(&admin.AdminID, &admin.AdminEmail, &admin.AdminPassword); err != nil {
+		return admin, err
+	}
+	return admin, nil
+}
+func (q *Query) RetriveAdminPassowrd(adminEmail string) (models.Adminmodel, error) {
+	var admin models.Adminmodel
+	if err := q.db.QueryRow("SELECT admin_id,admin_email,admin_password FROM admin WHERE admin_email = $1", adminEmail).Scan(&admin.AdminID, &admin.AdminEmail, &admin.AdminPassword); err != nil {
+		return admin, err
+	}
+	return admin, nil
+}
 
 func (q *Query) RetrivePassword(email string) (models.UserModel, error) {
 	var user models.UserModel
@@ -94,8 +128,8 @@ func (q *Query) RetrivePassword(email string) (models.UserModel, error) {
 }
 
 // StoreFile stores file data for the given employee ID and file name
-func (q *Query) StoreFile(userId , empId  , fileNameOne , fileNameTwo string , fileDataOne , fileDataTwo []byte) error {
-	_, err := q.db.Exec("INSERT INTO documents (user_id , emp_id , file_name_one , file_data_one , file_name_two , file_data_two) VALUES ($1, $2, $3,$4,$5,$6)",userId , empId , fileNameOne, fileDataOne ,  fileNameTwo , fileDataTwo)
+func (q *Query) StoreFile(userId, empId, fileNameOne, fileNameTwo string, fileDataOne, fileDataTwo []byte) error {
+	_, err := q.db.Exec("INSERT INTO documents (user_id , emp_id , file_name_one , file_data_one , file_name_two , file_data_two) VALUES ($1, $2, $3,$4,$5,$6)", userId, empId, fileNameOne, fileDataOne, fileNameTwo, fileDataTwo)
 	if err != nil {
 		return err
 	}
@@ -138,46 +172,107 @@ func (q *Query) StoreFormData(data models.FormData) error {
 	}
 	return nil
 }
-
-func (q *Query) FetchFormData(userId string) ([]models.FormData, error) {
-	// Prepare a map to store the form data
-	var formData models.FormData
+func (q *Query) FetchFormData() ([]models.FormData, error) {
 	var formDatas []models.FormData
 
-	// Query the database to fetch form data
-	row, err := q.db.Query(`
+	// Query the database to fetch all form data
+	rows, err := q.db.Query(`
 		SELECT 
-			user_id , emp_id , report_date, employee_name, premises, site_location, client_name,
+			user_id, emp_id, report_date, employee_name, premises, site_location, client_name,
 			scope_of_work, work_details, joint_visits, support_needed, status_of_work, 
 			priority_of_work, next_action_plan, result, type_of_work, closing_time, 
-			contact_person_name, contact_emailid , type_of_work , closing_time , contact_emailid
+			contact_person_name, contact_emailid
 		FROM formdata
-		WHERE user_id = $1
-	`, userId)
-
-	defer func() {
-		row.Close()
-	} ()
-
+	`)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close() // Ensure closure after checking the error
 
-	for row.Next() {
-		if err := row.Scan(&formData.UserID , &formData.EmployeeID , &formData.ReportDate , &formData.EmployeeName , &formData.Premises , 
-			&formData.SiteLocation , &formData.ClientName , &formData.ScopeOfWork,&formData.WorkDetails,&formData.JointVisits,
-			&formData.SupportNeeded , &formData.StatusOfWork , &formData.PriorityOfWork,
-			&formData.NextActionPlan , &formData.Result , &formData.TypeOfWork , &formData.ClosingTime,
-			&formData.ContactPersonName , &formData.ContactEmailID , &formData.TypeOfWork , &formData.ClosingTime , &formData.ContactEmailID); err != nil {
-			return nil,err
+	for rows.Next() {
+		var formData models.FormData
+		err := rows.Scan(
+			&formData.UserID, &formData.EmployeeID, &formData.ReportDate, &formData.EmployeeName,
+			&formData.Premises, &formData.SiteLocation, &formData.ClientName, &formData.ScopeOfWork,
+			&formData.WorkDetails, &formData.JointVisits, &formData.SupportNeeded, &formData.StatusOfWork,
+			&formData.PriorityOfWork, &formData.NextActionPlan, &formData.Result, &formData.TypeOfWork,
+			&formData.ClosingTime, &formData.ContactPersonName, &formData.ContactEmailID,
+		)
+		if err != nil {
+			return nil, err
 		}
 		formDatas = append(formDatas, formData)
 	}
-	if row.Err() != nil {
-		return nil,err
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return formDatas, nil
+}
+
+func (q *Query) AdminFetchFormData() ([]models.FormData, error) {
+	var formDatas []models.FormData
+
+	rows, err := q.db.Query(`
+		SELECT 
+			user_id, emp_id, report_date, employee_name, premises, site_location, client_name,
+			scope_of_work, work_details, joint_visits, support_needed, status_of_work, 
+			priority_of_work, next_action_plan, result, type_of_work, closing_time, 
+			contact_person_name, contact_emailid
+		FROM formdata
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var formData models.FormData
+		err := rows.Scan(
+			&formData.UserID, &formData.EmployeeID, &formData.ReportDate, &formData.EmployeeName,
+			&formData.Premises, &formData.SiteLocation, &formData.ClientName, &formData.ScopeOfWork,
+			&formData.WorkDetails, &formData.JointVisits, &formData.SupportNeeded, &formData.StatusOfWork,
+			&formData.PriorityOfWork, &formData.NextActionPlan, &formData.Result, &formData.TypeOfWork,
+			&formData.ClosingTime, &formData.ContactPersonName, &formData.ContactEmailID,
+		)
+		if err != nil {
+			return nil, err
+		}
+		formDatas = append(formDatas, formData)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return formDatas, nil
+}
+func (q *Query) DeleteEmployee(empId string) error {
+	tx, err := q.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	_, err = tx.Exec("DELETE FROM formdata WHERE emp_id = $1", empId)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM documents WHERE emp_id = $1", empId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // func (q *Query) FetchFile(, filename string) ([]byte, error) {
@@ -185,8 +280,8 @@ func (q *Query) FetchFormData(userId string) ([]models.FormData, error) {
 
 // 	// Query the database to fetch the file data based on emp_id and file_name
 // 	row := q.db.QueryRow(`
-// 		SELECT file_data 
-// 		FROM documents 
+// 		SELECT file_data
+// 		FROM documents
 // 		WHERE emp_id = $1 AND file_name = $2
 // 	`, empid, filename)
 

@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"net/http"
 
 	"github.com/Srujankm12/SRproject/internal/handlers"
 	"github.com/Srujankm12/SRproject/internal/middlewares"
@@ -29,5 +31,14 @@ func registerRouter(db *sql.DB) *mux.Router {
 	router.HandleFunc("/admin/fetch", adminf.HandleAdminFetchFormData).Methods("GET")
 	router.HandleFunc("/admin/delete/{id}", adminf.HandleDeleteEmployee).Methods("GET")
 
+	excelcon := handlers.NewTechnicalFormExcelHandler(repository.NewExcelDownload(db))
+	router.HandleFunc("/excel", excelcon.HandleDownloadExcel).Methods("GET")
+	router.HandleFunc("/Users/bunny/Desktop/Finalyear/test", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		fileName := vars["filename"]
+		filePath := fmt.Sprintf("/Users/bunny/Desktop/Finalyear/test%s", fileName)
+
+		http.ServeFile(w, r, filePath)
+	}).Methods("GET")
 	return router
 }

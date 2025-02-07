@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/Srujankm12/SRproject/internal/models"
 )
@@ -273,6 +274,27 @@ func (q *Query) DeleteEmployee(empId string) error {
 	}
 
 	return nil
+}
+
+func (q *Query) FetchExcel() ([]models.DownloadExcel, error) {
+	var data []models.DownloadExcel
+	rows, err := q.db.Query("SELECT * FROM formdata")
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var record models.DownloadExcel
+		if err := rows.Scan(&record.UserID, &record.EmployeeID, &record.ReportDate, &record.EmployeeName, &record.Premises, &record.SiteLocation, &record.ClientName, &record.ScopeOfWork, &record.WorkDetails, &record.JointVisits, &record.SupportNeeded, &record.StatusOfWork, &record.PriorityOfWork, &record.NextActionPlan, &record.Result, &record.TypeOfWork, &record.ClosingTime, &record.ContactPersonName, &record.ContactEmailID); err != nil {
+			return nil, err
+		}
+		data = append(data, record)
+	}
+	if len(data) == 0 {
+		return nil, errors.New("no data found")
+	}
+	return data, nil
 }
 
 // func (q *Query) FetchFile(, filename string) ([]byte, error) {

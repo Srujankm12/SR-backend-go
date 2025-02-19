@@ -55,8 +55,15 @@ func (e *ExcelDownload) CreateTechnialExcel() (*excelize.File, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	sheetName := "technical"
-	file.NewSheet(sheetName)
+	index, err := file.NewSheet(sheetName)
+	if err != nil {
+		return nil, err
+	}
+
+	file.SetActiveSheet(index)
+	file.DeleteSheet("Sheet1")
 
 	headers := []string{"UserID", "EmployeeID", "ReportDate", "EmployeeName", "Premises", "SiteLocation", "ClientName", "ScopeOfWork", "WorkDetails", "JointVisits", "SupportNeeded", "StatusOfWork", "PriorityOfWork", "NextActionPlan", "Result", "TypeOfWork", "ClosingTime", "ContactPersonName", "ContactEmailID"}
 	for col, header := range headers {
@@ -88,7 +95,9 @@ func (e *ExcelDownload) CreateTechnialExcel() (*excelize.File, error) {
 		file.SetCellValue(sheetName, fmt.Sprintf("Q%d", row), record.ClosingTime)
 		file.SetCellValue(sheetName, fmt.Sprintf("R%d", row), record.ContactPersonName)
 		file.SetCellValue(sheetName, fmt.Sprintf("S%d", row), record.ContactEmailID)
-
+	}
+	if len(data) == 0 {
+		return nil, fmt.Errorf("no data found")
 	}
 	return file, nil
 }

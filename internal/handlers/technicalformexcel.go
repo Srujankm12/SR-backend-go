@@ -59,19 +59,24 @@ func (h *TechnicalFormExcelHandler) HandleDownloadExcel(w http.ResponseWriter, r
 		file.SetCellValue(sheetName, fmt.Sprintf("R%d", row), record.ContactPersonName)
 		file.SetCellValue(sheetName, fmt.Sprintf("S%d", row), record.ContactEmailID)
 	}
+	tempDir := "/tmp"
+	if os.Getenv("OS") == "Windows_NT" {
+		tempDir = os.Getenv("TEMP")
+	}
 
-	tempDir := "/Users/bunny/Desktop/Finalyear/test/"
 	if err := os.MkdirAll(tempDir, os.ModePerm); err != nil {
-		http.Error(w, fmt.Sprintf("Error creating temporary directory: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error creating temp directory: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	filePath := tempDir + "technical.xlsx"
+	filePath := fmt.Sprintf("%s/MaterialInward.xlsx", tempDir)
+
 	if err := file.SaveAs(filePath); err != nil {
 		http.Error(w, fmt.Sprintf("Error saving file: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(fmt.Sprintf("File saved. You can download it from: %s\n", filePath)))
+	w.Header().Set("Content-Disposition", "attachment; filename=MaterialInward.xlsx")
+	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	http.ServeFile(w, r, filePath)
 }

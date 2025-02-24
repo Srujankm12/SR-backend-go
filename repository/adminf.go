@@ -27,7 +27,7 @@ func (repo *AdminRepository) FetchAllFormData() ([]models.AdminFetchFormData, er
 		SELECT 
 			user_id, emp_id, report_date, employee_name, premises, site_location, client_name,
 			scope_of_work, work_details, joint_visits, support_needed, status_of_work, 
-			priority_of_work, next_action_plan, result, type_of_work, closing_time, 
+			priority_of_work, next_action_plan, type_of_work, closing_time, 
 			contact_person_name, contact_emailid
 		FROM formdata
 	`)
@@ -42,7 +42,7 @@ func (repo *AdminRepository) FetchAllFormData() ([]models.AdminFetchFormData, er
 			&formData.UserID, &formData.EmployeeID, &formData.ReportDate, &formData.EmployeeName,
 			&formData.Premises, &formData.SiteLocation, &formData.ClientName, &formData.ScopeOfWork,
 			&formData.WorkDetails, &formData.JointVisits, &formData.SupportNeeded, &formData.StatusOfWork,
-			&formData.PriorityOfWork, &formData.NextActionPlan, &formData.Result, &formData.TypeOfWork,
+			&formData.PriorityOfWork, &formData.NextActionPlan, &formData.TypeOfWork,
 			&formData.ClosingTime, &formData.ContactPersonName, &formData.ContactEmailID,
 		)
 		if err != nil {

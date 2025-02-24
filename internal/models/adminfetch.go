@@ -15,7 +15,6 @@ type AdminFetchFormData struct {
 	StatusOfWork      string `json:"status_of_work"`
 	PriorityOfWork    string `json:"priority_of_work"`
 	NextActionPlan    string `json:"next_action_plan"`
-	Result            string `json:"result"`
 	TypeOfWork        string `json:"type_of_work"`
 	ClosingTime       string `json:"closing_time"`
 	ContactPersonName string `json:"contact_person_name"`

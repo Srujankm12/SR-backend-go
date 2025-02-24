@@ -5,46 +5,58 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
+
 	"github.com/Srujankm12/SRproject/internal/handlers"
 	"github.com/Srujankm12/SRproject/internal/middlewares"
 	"github.com/Srujankm12/SRproject/repository"
-	"github.com/gorilla/mux"
 )
 
 func registerRouter(db *sql.DB) *mux.Router {
-	router := mux.NewRouter()
+	router := mux.NewRouter().StrictSlash(true)
 	router.Use(middlewares.CorsMiddleware)
 
-	salescon := handlers.NewSalesHandler(repository.NewSalesRepository(db))
-	router.HandleFunc("/sales/login", salescon.LoginHandler).Methods("POST")
-	router.HandleFunc("/sales/logout", salescon.LogoutHandler).Methods("POST")
-	router.HandleFunc("/sales/checkin", salescon.CheckInHandler).Methods("POST")
-	router.HandleFunc("/sales/checkout", salescon.CheckOutHandler).Methods("POST")
+	// Sales Routes
+	salesRepo := repository.NewSalesRepository(db)
+	salesHandler := handlers.NewSalesHandler(salesRepo.DB)
+	router.HandleFunc("/sales/register", salesHandler.HandleCheckIn).Methods(http.MethodPost)
+	router.HandleFunc("/sales/checkout", salesHandler.HandleCheckOut).Methods(http.MethodPost)
 
-	authCont := handlers.NewAuthController(repository.NewAuth(db))
-	router.HandleFunc("/register", authCont.Register).Methods("POST")
-	router.HandleFunc("/login", authCont.Login).Methods("POST")
+	// Auth Routes
+	authRepo := repository.NewAuth(db)
+	authHandler := handlers.NewAuthController(authRepo)
+	router.HandleFunc("/register", authHandler.Register).Methods(http.MethodPost)
+	router.HandleFunc("/login", authHandler.Login).Methods(http.MethodPost)
 
-	formCont := handlers.NewFormController(repository.NewFormDataRepo(db))
-	router.HandleFunc("/submit", formCont.SubmitFormController).Methods("POST")
-	router.HandleFunc("/getdata/{id}", formCont.FetchFormDataController).Methods("GET")
+	// Form Data Routes
+	formRepo := repository.NewFormDataRepo(db)
+	formHandler := handlers.NewFormController(formRepo)
+	router.HandleFunc("/submit", formHandler.SubmitFormController).Methods(http.MethodPost)
+	router.HandleFunc("/getdata/{id}", formHandler.FetchFormDataController).Methods(http.MethodGet)
 
-	adminCont := handlers.NewAdminHandler(repository.NewAdmin(db))
-	router.HandleFunc("/admin/register", adminCont.AdminRegister).Methods("POST")
-	router.HandleFunc("/admin/login", adminCont.AdminLogin).Methods("POST")
+	// Admin Routes
+	adminRepo := repository.NewAdmin(db)
+	adminHandler := handlers.NewAdminHandler(adminRepo)
+	router.HandleFunc("/admin/register", adminHandler.AdminRegister).Methods(http.MethodPost)
+	router.HandleFunc("/admin/login", adminHandler.AdminLogin).Methods(http.MethodPost)
 
-	adminf := handlers.NewAdminFHandler(repository.NewAdminRepository(db))
-	router.HandleFunc("/admin/fetch", adminf.HandleAdminFetchFormData).Methods("GET")
-	router.HandleFunc("/admin/delete/{id}", adminf.HandleDeleteEmployee).Methods("GET")
+	// Admin Fetch & Delete
+	adminFormRepo := repository.NewAdminRepository(db)
+	adminFormHandler := handlers.NewAdminFHandler(adminFormRepo)
+	router.HandleFunc("/admin/fetch", adminFormHandler.HandleAdminFetchFormData).Methods(http.MethodGet)
+	router.HandleFunc("/admin/delete/{id}", adminFormHandler.HandleDeleteEmployee).Methods(http.MethodDelete) // Changed to DELETE
 
-	excelcon := handlers.NewTechnicalFormExcelHandler(repository.NewExcelDownload(db))
-	router.HandleFunc("/excel", excelcon.HandleDownloadExcel).Methods("GET")
+	// Excel Download
+	excelRepo := repository.NewExcelDownload(db)
+	excelHandler := handlers.NewTechnicalFormExcelHandler(excelRepo)
+	router.HandleFunc("/excel", excelHandler.HandleDownloadExcel).Methods(http.MethodGet)
+
+	// File Server Setup
 	tempDir := "/tmp"
 	if os.Getenv("OS") == "Windows_NT" {
 		tempDir = os.Getenv("TEMP")
 	}
-
-	router.PathPrefix("/files/").Handler(http.StripPrefix("/files/", http.FileServer(http.Dir(tempDir)))).Methods("GET")
+	router.PathPrefix("/files/").Handler(http.StripPrefix("/files/", http.FileServer(http.Dir(tempDir)))).Methods(http.MethodGet)
 
 	return router
 }

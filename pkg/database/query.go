@@ -50,62 +50,50 @@ func (q *Query) CreateTables() error {
     		admin_password VARCHAR(100) NOT NULL
 		)
 		`,
-		`	CREATE TABLE IF NOT EXISTS formdata (
-    			user_id VARCHAR(100) NOT NULL,
-    			emp_id VARCHAR(100) NOT NULL,
-    			report_date DATE NOT NULL,
-    			employee_name VARCHAR(255) NOT NULL,
-    			premises VARCHAR(255) NOT NULL,
-    			site_location VARCHAR(255) NOT NULL,
-    			client_name VARCHAR(255) NOT NULL,
-    			scope_of_work TEXT,
-    			work_details TEXT,
-    			joint_visits VARCHAR(255),
-    			support_needed VARCHAR(255),
-    			status_of_work VARCHAR(255),
-    			priority_of_work VARCHAR(255),
-    			next_action_plan TEXT,
-    			result TEXT,
-    			type_of_work VARCHAR(255),
-    			closing_time VARCHAR(200),
-    			contact_person_name VARCHAR(255),
-    			contact_emailid VARCHAR(255),
-    			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-				FOREIGN KEY (emp_id) REFERENCES documents(emp_id) ON DELETE CASCADE
-	)
-		`,
+		`CREATE TABLE IF NOT EXISTS sales_reports (
+    user_id VARCHAR(100) PRIMARY KEY,
+    emp_id VARCHAR(100) NOT NULL,
+    work TEXT NOT NULL,
+    todays_work_plan TEXT NOT NULL,
+    login_time TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (created_at)
 
-		`CREATE TABLE IF NOT EXISTS login_logout_report (
-			user_id VARCHAR(100) NOT NULL,
-			emp_id VARCHAR(100) NOT NULL,
-			login_time TIMESTAMP NOT NULL DEFAULT NOW(),
-			todays_work_plan TEXT NOT NULL,
-			logout_time TIMESTAMP,
-			total_no_of_visits INT DEFAULT 0,
-			total_no_of_cold_calls INT DEFAULT 0,
-			total_no_of_customer_follow_up INT DEFAULT 0,
-			total_enquiry_generated INT DEFAULT 0,
-			total_enquiry_value DECIMAL(10,2) DEFAULT 0.00,
-			total_order_lost INT DEFAULT 0,
-			total_order_lost_value DECIMAL(10,2) DEFAULT 0.00,
-			total_order_won INT DEFAULT 0,
-			total_order_won_value DECIMAL(10,2) DEFAULT 0.00,
-			customer_follow_up_name TEXT,
-			notes TEXT,
-			tomorrow_goals TEXT,
-			how_was_today TEXT,
-			work_location VARCHAR(50) NOT NULL CHECK (work_location IN ('Office', 'Site')),
-			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-	);
-`,
+
+		)`,
+		`CREATE TABLE IF NOT EXISTS logout_summaries (
+    user_id VARCHAR(100) NOT NULL,
+    emp_id VARCHAR(100) NOT NULL,
+    total_no_of_visits INT DEFAULT 0,
+    total_no_of_cold_calls INT DEFAULT 0,
+    total_no_of_follow_ups INT DEFAULT 0,
+    total_enquiry_generated INT DEFAULT 0,
+    total_enquiry_value INT DEFAULT 0,
+    total_order_lost INT DEFAULT 0,
+    total_order_lost_value INT DEFAULT 0,
+    total_order_won INT DEFAULT 0,
+    total_order_won_value INT DEFAULT 0,
+    customer_follow_up_name TEXT,
+    notes TEXT,
+    tomorrow_goals TEXT,
+    how_was_today TEXT,
+    work_location TEXT,
+    logout_time TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, logout_time),
+    FOREIGN KEY (user_id) REFERENCES sales_reports(user_id) ON DELETE CASCADE
+
+
+
+		)`,
 	}
 
-	for _, j := range queries {
-		_, err = tx.Exec(j)
+	for _, query := range queries {
+		_, err = tx.Exec(query)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 func (q *Query) RegisterLogin(userID, empID, todaysWorkPlan, workLocation string) error {

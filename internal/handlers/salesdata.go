@@ -1,109 +1,131 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strconv"
+	"time"
 
+	"github.com/Srujankm12/SRproject/internal/models"
 	"github.com/Srujankm12/SRproject/repository"
 )
 
+// SalesHandler manages sales reports and logout summaries.
 type SalesHandler struct {
-	repo *repository.SalesRepository
+	Repo *repository.SalesRepository
 }
 
-func NewSalesHandler(repo *repository.SalesRepository) *SalesHandler {
-	return &SalesHandler{repo: repo}
+// NewSalesHandler initializes the handler with the repository.
+func NewSalesHandler(db *sql.DB) *SalesHandler {
+	return &SalesHandler{
+		Repo: repository.NewSalesRepository(db),
+	}
 }
 
-// 🟢 User Login
-func (h *SalesHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.FormValue("user_id")
-	workLocation := r.FormValue("work_location")
-	todaysWorkPlan := r.FormValue("todays_work_plan")
+// HandleCheckIn handles sales report entry (check-in).
+func (h *SalesHandler) HandleCheckIn(w http.ResponseWriter, r *http.Request) {
+	var report models.SalesReport
 
-	empID, err := h.repo.UserLogin(userID, workLocation, todaysWorkPlan)
+	// Parse request body
+	err := json.NewDecoder(r.Body).Decode(&report)
 	if err != nil {
-		http.Error(w, "Login failed", http.StatusInternalServerError)
-		fmt.Println(err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Login successful",
-		"emp_id":  empID,
-	})
-}
+	// Set timestamps
+	report.CreatedAt = time.Now()
 
-func (h *SalesHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.FormValue("user_id")
-	empID := r.FormValue("emp_id")
-
-	totalVisits := parseInt(r.FormValue("total_no_of_visits"))
-	coldCalls := parseInt(r.FormValue("total_no_of_cold_calls"))
-	followUps := parseInt(r.FormValue("total_no_of_customer_follow_up"))
-	enquiries := parseInt(r.FormValue("total_enquiry_generated"))
-	ordersLost := parseInt(r.FormValue("total_order_lost"))
-	ordersWon := parseInt(r.FormValue("total_order_won"))
-	notes := r.FormValue("notes")
-	tomorrowGoals := r.FormValue("tomorrow_goals")
-	howWasToday := r.FormValue("how_was_today")
-
-	err := h.repo.UserLogout(userID, empID, totalVisits, coldCalls, followUps, enquiries, ordersLost, ordersWon, notes, tomorrowGoals, howWasToday)
+	// Check if the user is already logged in
+	isLoggedIn, err := h.Repo.CheckIfUserLoggedIn(report.UserID)
 	if err != nil {
-		http.Error(w, "Logout failed", http.StatusInternalServerError)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Logout successful",
-	})
-}
-
-// 🟢 Site Check-In
-func (h *SalesHandler) CheckInHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.FormValue("user_id")
-	empID := r.FormValue("emp_id")
-	companyName := r.FormValue("company_name")
-	purpose := r.FormValue("purpose")
-
-	err := h.repo.SiteCheckIn(userID, empID, companyName, purpose)
-	if err != nil {
-		http.Error(w, "Check-in failed", http.StatusInternalServerError)
+	if isLoggedIn {
+		http.Error(w, "User already checked in", http.StatusConflict)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Check-in successful",
-	})
-}
-
-// 🟢 Site Check-Out
-func (h *SalesHandler) CheckOutHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.FormValue("user_id")
-	empID := r.FormValue("emp_id")
-	engineerName := r.FormValue("engineer_name")
-	companySalesStage := r.FormValue("company_sales_stage")
-	visitOn := r.FormValue("visit_on")
-	timelineForNextActionPlan := r.FormValue("timeline_for_next_action_plan")
-	challenges := r.FormValue("challenges")
-	visitRating := parseInt(r.FormValue("visit_rating"))
-	resultOfVisit := r.FormValue("result_of_visit")
-	notes := r.FormValue("notes")
-
-	err := h.repo.SiteCheckOut(userID, empID, engineerName, companySalesStage, visitOn, timelineForNextActionPlan, challenges, resultOfVisit, notes, visitRating)
+	// Insert check-in report
+	err = h.Repo.InsertSalesReport(report)
 	if err != nil {
-		http.Error(w, "Check-out failed", http.StatusInternalServerError)
+		http.Error(w, "Failed to check in", http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Check-out successful",
-	})
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Checked in successfully"})
 }
 
-func parseInt(value string) int {
-	num, _ := strconv.Atoi(value)
-	return num
+// HandleCheckOut handles user logout summary (check-out).
+func (h *SalesHandler) HandleCheckOut(w http.ResponseWriter, r *http.Request) {
+	var summary models.LogoutSummary
+
+	// Parse request body
+	err := json.NewDecoder(r.Body).Decode(&summary)
+	if err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Set logout timestamp
+	summary.LogoutTime = time.Now()
+
+	// Insert logout summary
+	err = h.Repo.InsertLogoutSummary(summary)
+	if err != nil {
+		http.Error(w, "Failed to log out", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
+}
+
+// HandleGetSalesReport retrieves a user's latest sales report.
+func (h *SalesHandler) HandleGetSalesReport(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+
+	if userID == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	report, err := h.Repo.GetUserSalesReport(userID)
+	if err != nil {
+		http.Error(w, "Failed to retrieve sales report", http.StatusInternalServerError)
+		return
+	}
+
+	if report == nil {
+		http.Error(w, "No sales report found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(report)
+}
+
+// HandleGetLogoutSummary retrieves a user's latest logout summary.
+func (h *SalesHandler) HandleGetLogoutSummary(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+
+	if userID == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	summary, err := h.Repo.GetUserLogoutSummary(userID)
+	if err != nil {
+		http.Error(w, "Failed to retrieve logout summary", http.StatusInternalServerError)
+		return
+	}
+
+	if summary == nil {
+		http.Error(w, "No logout summary found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(summary)
 }

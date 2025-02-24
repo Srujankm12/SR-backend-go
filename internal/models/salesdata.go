@@ -2,48 +2,18 @@ package models
 
 import "time"
 
-type User struct {
-	UserID   string `json:"user_id"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
 type SalesReport struct {
-	EmpID          string    `json:"emp_id"`
 	UserID         string    `json:"user_id"`
+	EmployeeID     string    `json:"emp_id"`
 	Work           string    `json:"work"`
 	TodaysWorkPlan string    `json:"todays_work_plan"`
+	LoginTime      time.Time `json:"login_time"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 
-type SiteVisit struct {
-	VisitID     string    `json:"visit_id"`
-	EmpID       string    `json:"emp_id"`
-	UserID      string    `json:"user_id"`
-	CompanyName string    `json:"company_name"`
-	Purpose     string    `json:"purpose"`
-	CheckInTime time.Time `json:"checkin_time"`
-}
-
-type SiteCheckout struct {
-	CheckoutID                string    `json:"checkout_id"`
-	VisitID                   string    `json:"visit_id"`
-	EmpID                     string    `json:"emp_id"`
-	UserID                    string    `json:"user_id"`
-	EngineerName              string    `json:"engineer_name"`
-	CompanySalesStage         string    `json:"company_sales_stage"`
-	VisitOn                   time.Time `json:"visit_on"`
-	TimelineForNextActionPlan string    `json:"timeline_for_next_action_plan"`
-	Challenges                string    `json:"challenges"`
-	VisitRating               int       `json:"visit_rating"`
-	ResultOfVisit             string    `json:"result_of_visit"`
-	Notes                     string    `json:"notes"`
-	CheckoutTime              time.Time `json:"checkout_time"`
-}
-
 type LogoutSummary struct {
-	LogoutID              string    `json:"logout_id"`
 	UserID                string    `json:"user_id"`
+	EmployeeID            string    `json:"emp_id"`
 	TotalNoOfVisits       int       `json:"total_no_of_visits"`
 	TotalNoOfColdCalls    int       `json:"total_no_of_cold_calls"`
 	TotalNoOfFollowUps    int       `json:"total_no_of_follow_ups"`

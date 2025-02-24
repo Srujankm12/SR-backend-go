@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/Srujankm12/SRproject/internal/models"
 )
@@ -49,9 +50,35 @@ func (q *Query) CreateTables() error {
     		admin_password VARCHAR(100) NOT NULL
 		)
 		`,
+		`(CREATE TABLE IF NOT EXISTS sales_report (
+			report_id SERIAL PRIMARY KEY,
+			user_id VARCHAR(100) NOT NULL,
+			work TEXT NOT NULL,
+			todays_work_plan TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT NOW(),
+			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+		
+		)`,
+		`(
+		CREATE TABLE IF NOT EXISTS site_visit (
+			visit_id SERIAL PRIMARY KEY,
+			user_id VARCHAR(100) NOT NULL,
+			company_name VARCHAR(255) NOT NULL,
+			purpose TEXT NOT NULL,
+			checkin_time TIMESTAMP NOT NULL,
+			checkout_time TIMESTAMP,
+			engineer_name VARCHAR(255) NOT NULL,
+			company_sales_stage VARCHAR(255),
+			visit_on DATE NOT NULL,
+			next_action_plan TEXT,
+			challenges TEXT,
+			visit_rating INT CHECK (visit_rating BETWEEN 1 AND 5),
+			result_of_visit TEXT,
+			notes TEXT,
+			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 
-		`
-		CREATE TABLE IF NOT EXISTS formdata (
+		)`,
+		`	CREATE TABLE IF NOT EXISTS formdata (
     			user_id VARCHAR(100) NOT NULL,
     			emp_id VARCHAR(100) NOT NULL,
     			report_date DATE NOT NULL,
@@ -84,6 +111,127 @@ func (q *Query) CreateTables() error {
 		}
 	}
 	return nil
+}
+func (q *Query) RegisterLogin(userID, empID, todaysWorkPlan, workLocation string) error {
+	var exists bool
+	err := q.db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM login_logout_report 
+			WHERE user_id = $1 AND emp_id = $2 AND DATE(login_time) = CURRENT_DATE
+		)
+	`, userID, empID).Scan(&exists)
+
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("User has already logged in today")
+	}
+
+	_, err = q.db.Exec(`
+		INSERT INTO login_logout_report (
+			user_id, emp_id, login_time, todays_work_plan, work_location
+		) VALUES (
+			$1, $2, NOW(), $3, $4
+		)
+	`, userID, empID, todaysWorkPlan, workLocation)
+
+	return err
+}
+
+func (q *Query) RegisterCheckin(userID, empID, companyName, purpose string) error {
+	var exists bool
+	err := q.db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM site_checkin_checkout_report 
+			WHERE user_id = $1 AND emp_id = $2 AND DATE(checkin_time) = CURRENT_DATE
+		)
+	`, userID, empID).Scan(&exists)
+
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("User has already checked in today")
+	}
+
+	_, err = q.db.Exec(`
+		INSERT INTO site_checkin_checkout_report (
+			user_id, emp_id, checkin_time, company_name, purpose
+		) VALUES (
+			$1, $2, NOW(), $3, $4
+		)
+	`, userID, empID, companyName, purpose)
+
+	return err
+}
+
+func (q *Query) RegisterCheckout(
+	userID, empID, engineerName, companySalesStage, visitOn, timelineForNextActionPlan,
+	challenges, resultOfVisit, notes string, visitRating int) error {
+
+	_, err := q.db.Exec(`
+		UPDATE site_checkin_checkout_report 
+		SET 
+			checkout_time = NOW(),
+			engineer_name = $1,
+			company_sales_stage = $2,
+			visit_on = $3,
+			timeline_for_next_action_plan = $4,
+			challenges = $5,
+			visit_rating = $6,
+			result_of_visit = $7,
+			notes = $8
+		WHERE user_id = $9 AND emp_id = $10 AND checkout_time IS NULL
+	`, engineerName, companySalesStage, visitOn, timelineForNextActionPlan,
+		challenges, visitRating, resultOfVisit, notes, userID, empID)
+
+	return err
+}
+
+func (q *Query) RegisterLogout(
+	userID, empID, customerFollowUpName, notes, tomorrowGoals, howWasToday string,
+	totalNoOfVisits, totalNoOfColdCalls, totalNoOfCustomerFollowUp, totalEnquiryGenerated, totalOrderLost, totalOrderWon int,
+	totalEnquiryValue, totalOrderLostValue, totalOrderWonValue float64) error {
+
+	var exists bool
+	err := q.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM login_logout_report 
+			WHERE user_id = $1 AND emp_id = $2 AND logout_time IS NOT NULL
+		)
+	`, userID, empID).Scan(&exists)
+
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("User has already logged out today")
+	}
+
+	_, err = q.db.Exec(`
+		UPDATE login_logout_report 
+		SET 
+			logout_time = NOW(),
+			total_no_of_visits = $1,
+			total_no_of_cold_calls = $2,
+			total_no_of_customer_follow_up = $3,
+			total_enquiry_generated = $4,
+			total_enquiry_value = $5,
+			total_order_lost = $6,
+			total_order_lost_value = $7,
+			total_order_won = $8,
+			total_order_won_value = $9,
+			customer_follow_up_name = $10,
+			notes = $11,
+			tomorrow_goals = $12,
+			how_was_today = $13
+		WHERE user_id = $14 AND emp_id = $15 AND logout_time IS NULL
+	`, totalNoOfVisits, totalNoOfColdCalls, totalNoOfCustomerFollowUp, totalEnquiryGenerated, totalEnquiryValue,
+		totalOrderLost, totalOrderLostValue, totalOrderWon, totalOrderWonValue, customerFollowUpName,
+		notes, tomorrowGoals, howWasToday, userID, empID)
+
+	return err
 }
 
 func (q *Query) Register(userid, email, password string) error {
@@ -128,7 +276,6 @@ func (q *Query) RetrivePassword(email string) (models.UserModel, error) {
 	return user, nil
 }
 
-// StoreFile stores file data for the given employee ID and file name
 func (q *Query) StoreFile(userId, empId, fileNameOne, fileNameTwo string, fileDataOne, fileDataTwo []byte) error {
 	_, err := q.db.Exec("INSERT INTO documents (user_id , emp_id , file_name_one , file_data_one , file_name_two , file_data_two) VALUES ($1, $2, $3,$4,$5,$6)", userId, empId, fileNameOne, fileDataOne, fileNameTwo, fileDataTwo)
 	if err != nil {
@@ -137,7 +284,6 @@ func (q *Query) StoreFile(userId, empId, fileNameOne, fileNameTwo string, fileDa
 	return nil
 }
 
-// StoreFormData stores the form data associated with the given employee ID
 func (q *Query) StoreFormData(data models.FormData) error {
 	_, err := q.db.Exec(`
 		INSERT INTO formdata (
@@ -176,7 +322,6 @@ func (q *Query) StoreFormData(data models.FormData) error {
 func (q *Query) FetchFormData() ([]models.FormData, error) {
 	var formDatas []models.FormData
 
-	// Query the database to fetch all form data
 	rows, err := q.db.Query(`
 		SELECT 
 			user_id, emp_id, report_date, employee_name, premises, site_location, client_name,
@@ -188,7 +333,7 @@ func (q *Query) FetchFormData() ([]models.FormData, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() // Ensure closure after checking the error
+	defer rows.Close()
 
 	for rows.Next() {
 		var formData models.FormData

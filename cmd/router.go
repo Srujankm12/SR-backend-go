@@ -15,6 +15,12 @@ func registerRouter(db *sql.DB) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(middlewares.CorsMiddleware)
 
+	salescon := handlers.NewSalesHandler(repository.NewSalesRepository(db))
+	router.HandleFunc("/sales/login", salescon.LoginHandler).Methods("POST")
+	router.HandleFunc("/sales/logout", salescon.LogoutHandler).Methods("POST")
+	router.HandleFunc("/sales/checkin", salescon.CheckInHandler).Methods("POST")
+	router.HandleFunc("/sales/checkout", salescon.CheckOutHandler).Methods("POST")
+
 	authCont := handlers.NewAuthController(repository.NewAuth(db))
 	router.HandleFunc("/register", authCont.Register).Methods("POST")
 	router.HandleFunc("/login", authCont.Login).Methods("POST")

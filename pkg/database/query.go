@@ -59,7 +59,6 @@ func (q *Query) CreateTables() error {
     			status_of_work VARCHAR(255),
     			priority_of_work VARCHAR(255),
     			next_action_plan TEXT,
-    			result TEXT,
     			type_of_work VARCHAR(255),
     			closing_time VARCHAR(200),
     			contact_person_name VARCHAR(255),
@@ -296,9 +295,9 @@ func (q *Query) StoreFormData(data models.FormData) error {
 			user_id, emp_id, report_date, employee_name, premises, 
 			site_location, client_name, scope_of_work, work_details, joint_visits, 
 			support_needed, status_of_work, priority_of_work, next_action_plan, 
-			result, type_of_work, closing_time, contact_person_name, contact_emailid
+		 type_of_work, closing_time, contact_person_name, contact_emailid
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
 		)`,
 		data.UserID,
 		data.EmployeeID,
@@ -314,7 +313,7 @@ func (q *Query) StoreFormData(data models.FormData) error {
 		data.StatusOfWork,
 		data.PriorityOfWork,
 		data.NextActionPlan,
-		data.Result,
+
 		data.TypeOfWork,
 		data.ClosingTime,
 		data.ContactPersonName,
@@ -332,7 +331,7 @@ func (q *Query) FetchFormData() ([]models.FormData, error) {
 		SELECT 
 			user_id, emp_id, report_date, employee_name, premises, site_location, client_name,
 			scope_of_work, work_details, joint_visits, support_needed, status_of_work, 
-			priority_of_work, next_action_plan, result, type_of_work, closing_time, 
+			priority_of_work, next_action_plan, type_of_work, closing_time, 
 			contact_person_name, contact_emailid
 		FROM formdata
 	`)
@@ -347,7 +346,7 @@ func (q *Query) FetchFormData() ([]models.FormData, error) {
 			&formData.UserID, &formData.EmployeeID, &formData.ReportDate, &formData.EmployeeName,
 			&formData.Premises, &formData.SiteLocation, &formData.ClientName, &formData.ScopeOfWork,
 			&formData.WorkDetails, &formData.JointVisits, &formData.SupportNeeded, &formData.StatusOfWork,
-			&formData.PriorityOfWork, &formData.NextActionPlan, &formData.Result, &formData.TypeOfWork,
+			&formData.PriorityOfWork, &formData.NextActionPlan, &formData.TypeOfWork,
 			&formData.ClosingTime, &formData.ContactPersonName, &formData.ContactEmailID,
 		)
 		if err != nil {
@@ -370,7 +369,7 @@ func (q *Query) AdminFetchFormData() ([]models.FormData, error) {
 		SELECT 
 			user_id, emp_id, report_date, employee_name, premises, site_location, client_name,
 			scope_of_work, work_details, joint_visits, support_needed, status_of_work, 
-			priority_of_work, next_action_plan, result, type_of_work, closing_time, 
+			priority_of_work, next_action_plan, type_of_work, closing_time, 
 			contact_person_name, contact_emailid
 		FROM formdata
 	`)
@@ -385,7 +384,7 @@ func (q *Query) AdminFetchFormData() ([]models.FormData, error) {
 			&formData.UserID, &formData.EmployeeID, &formData.ReportDate, &formData.EmployeeName,
 			&formData.Premises, &formData.SiteLocation, &formData.ClientName, &formData.ScopeOfWork,
 			&formData.WorkDetails, &formData.JointVisits, &formData.SupportNeeded, &formData.StatusOfWork,
-			&formData.PriorityOfWork, &formData.NextActionPlan, &formData.Result, &formData.TypeOfWork,
+			&formData.PriorityOfWork, &formData.NextActionPlan, &formData.TypeOfWork,
 			&formData.ClosingTime, &formData.ContactPersonName, &formData.ContactEmailID,
 		)
 		if err != nil {

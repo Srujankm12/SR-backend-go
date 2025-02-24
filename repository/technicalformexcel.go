@@ -33,7 +33,7 @@ func (e *ExcelDownload) FetchExcel() ([]models.DownloadExcel, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var record models.DownloadExcel
-		if err := rows.Scan(&record.UserID, &record.EmployeeID, &record.ReportDate, &record.EmployeeName, &record.Premises, &record.SiteLocation, &record.ClientName, &record.ScopeOfWork, &record.WorkDetails, &record.JointVisits, &record.SupportNeeded, &record.StatusOfWork, &record.PriorityOfWork, &record.NextActionPlan, &record.Result, &record.TypeOfWork, &record.ClosingTime, &record.ContactPersonName, &record.ContactEmailID); err != nil {
+		if err := rows.Scan(&record.UserID, &record.EmployeeID, &record.ReportDate, &record.EmployeeName, &record.Premises, &record.SiteLocation, &record.ClientName, &record.ScopeOfWork, &record.WorkDetails, &record.JointVisits, &record.SupportNeeded, &record.StatusOfWork, &record.PriorityOfWork, &record.NextActionPlan, &record.TypeOfWork, &record.ClosingTime, &record.ContactPersonName, &record.ContactEmailID); err != nil {
 			return nil, err
 		}
 		data = append(data, record)
@@ -65,7 +65,7 @@ func (e *ExcelDownload) CreateTechnialExcel() (*excelize.File, error) {
 	file.SetActiveSheet(index)
 	file.DeleteSheet("Sheet1")
 
-	headers := []string{"UserID", "EmployeeID", "ReportDate", "EmployeeName", "Premises", "SiteLocation", "ClientName", "ScopeOfWork", "WorkDetails", "JointVisits", "SupportNeeded", "StatusOfWork", "PriorityOfWork", "NextActionPlan", "Result", "TypeOfWork", "ClosingTime", "ContactPersonName", "ContactEmailID"}
+	headers := []string{"UserID", "EmployeeID", "ReportDate", "EmployeeName", "Premises", "SiteLocation", "ClientName", "ScopeOfWork", "WorkDetails", "JointVisits", "SupportNeeded", "StatusOfWork", "PriorityOfWork", "NextActionPlan", "TypeOfWork", "ClosingTime", "ContactPersonName", "ContactEmailID"}
 	for col, header := range headers {
 		cell, err := excelize.CoordinatesToCellName(col+1, 1)
 		if err != nil {
@@ -90,11 +90,11 @@ func (e *ExcelDownload) CreateTechnialExcel() (*excelize.File, error) {
 		file.SetCellValue(sheetName, fmt.Sprintf("L%d", row), record.StatusOfWork)
 		file.SetCellValue(sheetName, fmt.Sprintf("M%d", row), record.PriorityOfWork)
 		file.SetCellValue(sheetName, fmt.Sprintf("N%d", row), record.NextActionPlan)
-		file.SetCellValue(sheetName, fmt.Sprintf("O%d", row), record.Result)
-		file.SetCellValue(sheetName, fmt.Sprintf("P%d", row), record.TypeOfWork)
-		file.SetCellValue(sheetName, fmt.Sprintf("Q%d", row), record.ClosingTime)
-		file.SetCellValue(sheetName, fmt.Sprintf("R%d", row), record.ContactPersonName)
-		file.SetCellValue(sheetName, fmt.Sprintf("S%d", row), record.ContactEmailID)
+		file.SetCellValue(sheetName, fmt.Sprintf("O%d", row), record.TypeOfWork)
+		file.SetCellValue(sheetName, fmt.Sprintf("P%d", row), record.ClosingTime)
+		file.SetCellValue(sheetName, fmt.Sprintf("Q%d", row), record.ContactPersonName)
+		file.SetCellValue(sheetName, fmt.Sprintf("R%d", row), record.ContactEmailID)
+
 	}
 	if len(data) == 0 {
 		return nil, fmt.Errorf("no data found")

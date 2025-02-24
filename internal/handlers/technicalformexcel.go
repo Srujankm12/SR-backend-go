@@ -30,7 +30,7 @@ func (h *TechnicalFormExcelHandler) HandleDownloadExcel(w http.ResponseWriter, r
 	sheetName := "technical"
 	file.NewSheet(sheetName)
 
-	headers := []string{"UserID", "EmployeeID", "ReportDate", "EmployeeName", "Premises", "SiteLocation", "ClientName", "ScopeOfWork", "WorkDetails", "JointVisits", "SupportNeeded", "StatusOfWork", "PriorityOfWork", "NextActionPlan", "Result", "TypeOfWork", "ClosingTime", "ContactPersonName", "ContactEmailID"}
+	headers := []string{"UserID", "EmployeeID", "ReportDate", "EmployeeName", "Premises", "SiteLocation", "ClientName", "ScopeOfWork", "WorkDetails", "JointVisits", "SupportNeeded", "StatusOfWork", "PriorityOfWork", "NextActionPlan", "TypeOfWork", "ClosingTime", "ContactPersonName", "ContactEmailID"}
 
 	for col, header := range headers {
 		cell, _ := excelize.CoordinatesToCellName(col+1, 1)
@@ -53,11 +53,11 @@ func (h *TechnicalFormExcelHandler) HandleDownloadExcel(w http.ResponseWriter, r
 		file.SetCellValue(sheetName, fmt.Sprintf("L%d", row), record.StatusOfWork)
 		file.SetCellValue(sheetName, fmt.Sprintf("M%d", row), record.PriorityOfWork)
 		file.SetCellValue(sheetName, fmt.Sprintf("N%d", row), record.NextActionPlan)
-		file.SetCellValue(sheetName, fmt.Sprintf("O%d", row), record.Result)
-		file.SetCellValue(sheetName, fmt.Sprintf("P%d", row), record.TypeOfWork)
-		file.SetCellValue(sheetName, fmt.Sprintf("Q%d", row), record.ClosingTime)
-		file.SetCellValue(sheetName, fmt.Sprintf("R%d", row), record.ContactPersonName)
-		file.SetCellValue(sheetName, fmt.Sprintf("S%d", row), record.ContactEmailID)
+		file.SetCellValue(sheetName, fmt.Sprintf("O%d", row), record.TypeOfWork)
+		file.SetCellValue(sheetName, fmt.Sprintf("P%d", row), record.ClosingTime)
+		file.SetCellValue(sheetName, fmt.Sprintf("Q%d", row), record.ContactPersonName)
+		file.SetCellValue(sheetName, fmt.Sprintf("R%d", row), record.ContactEmailID)
+
 	}
 	tempDir := "/tmp"
 	if os.Getenv("OS") == "Windows_NT" {

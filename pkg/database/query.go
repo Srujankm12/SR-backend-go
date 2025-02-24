@@ -44,6 +44,30 @@ func (q *Query) CreateTables() error {
     		FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 		)
 		`,
+		`	CREATE TABLE IF NOT EXISTS formdata (
+    			user_id VARCHAR(100) NOT NULL,
+    			emp_id VARCHAR(100) NOT NULL,
+    			report_date DATE NOT NULL,
+    			employee_name VARCHAR(255) NOT NULL,
+    			premises VARCHAR(255) NOT NULL,
+    			site_location VARCHAR(255) NOT NULL,
+    			client_name VARCHAR(255) NOT NULL,
+    			scope_of_work TEXT,
+    			work_details TEXT,
+    			joint_visits VARCHAR(255),
+    			support_needed VARCHAR(255),
+    			status_of_work VARCHAR(255),
+    			priority_of_work VARCHAR(255),
+    			next_action_plan TEXT,
+    			result TEXT,
+    			type_of_work VARCHAR(255),
+    			closing_time VARCHAR(200),
+    			contact_person_name VARCHAR(255),
+    			contact_emailid VARCHAR(255),
+    			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+				FOREIGN KEY (emp_id) REFERENCES documents(emp_id) ON DELETE CASCADE
+	)
+		`,
 		`CREATE TABLE IF NOT EXISTS admin (
     		admin_id VARCHAR(100) PRIMARY KEY,
     		admin_email VARCHAR(255) NOT NULL,  
@@ -51,13 +75,13 @@ func (q *Query) CreateTables() error {
 		)
 		`,
 		`CREATE TABLE IF NOT EXISTS sales_reports (
-    user_id VARCHAR(100) PRIMARY KEY,
-    emp_id VARCHAR(100) NOT NULL,
-    work TEXT NOT NULL,
-    todays_work_plan TEXT NOT NULL,
-    login_time TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE (created_at)
+			user_id VARCHAR(100) PRIMARY KEY,
+			emp_id VARCHAR(100) NOT NULL,
+			work TEXT NOT NULL,
+			todays_work_plan TEXT NOT NULL,
+			login_time TIMESTAMP NOT NULL DEFAULT NOW(),
+			created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+			UNIQUE (created_at)
 
 
 		)`,
@@ -80,9 +104,7 @@ func (q *Query) CreateTables() error {
     work_location TEXT,
     logout_time TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (user_id, logout_time),
-    FOREIGN KEY (user_id) REFERENCES sales_reports(user_id) ON DELETE CASCADE
-
-
+    FOREIGN KEY (user_id, created_at) REFERENCES sales_reports(user_id, created_at) ON DELETE CASCADE
 
 		)`,
 	}

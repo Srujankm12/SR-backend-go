@@ -124,27 +124,32 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 }
 
 func (fdr *FormDataRepo) FetchFormData(r *http.Request) ([]models.FormData, error) {
-	// Parse the request parameters to get the employee ID (empID)
-	// err := r.ParseForm()
-	// if err != nil {
-	// 	return nil, errors.New("failed to parse form: " + err.Error())
-	// }
+	// Extract user ID from URL params
+	userID := mux.Vars(r)["id"]
+	log.Println("Extracted userID:", userID) // Debugging
 
-	// userID := r.FormValue("user_id")
-	var userID = mux.Vars(r)["id"]
 	if userID == "" {
+		log.Println("Error: Employee ID is missing")
 		return nil, errors.New("employee ID is missing")
+	}
+
+	// Ensure database connection is valid
+	if fdr.db == nil {
+		log.Println("Error: Database connection is nil")
+		return nil, errors.New("database connection error")
 	}
 
 	// Create a query instance to interact with the database
 	query := database.NewQuery(fdr.db)
 
-	// Fetch form data
-	formData, err := query.FetchFormData()
+	// Fetch form data **filtered by userID**
+	formData, err := query.FetchFormData(userID)
 	if err != nil {
 		log.Println("Error fetching form data:", err)
 		return nil, err
 	}
-	// Return the form data, along with file contents
+
+	log.Println("Successfully fetched form data for userID:", userID) // Debugging
+
 	return formData, nil
 }

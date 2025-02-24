@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/Srujankm12/SRproject/internal/models"
 )
@@ -324,8 +325,11 @@ func (q *Query) StoreFormData(data models.FormData) error {
 	}
 	return nil
 }
-func (q *Query) FetchFormData() ([]models.FormData, error) {
+func (q *Query) FetchFormData(userID string) ([]models.FormData, error) {
 	var formDatas []models.FormData
+
+	// Debugging: Ensure `userID` is being used
+	log.Println("Executing query for userID:", userID)
 
 	rows, err := q.db.Query(`
 		SELECT 
@@ -334,8 +338,9 @@ func (q *Query) FetchFormData() ([]models.FormData, error) {
 			priority_of_work, next_action_plan, type_of_work, closing_time, 
 			contact_person_name, contact_emailid
 		FROM formdata
-	`)
+		WHERE user_id = $1`, userID) // ✅ Filtering by user_id
 	if err != nil {
+		log.Println("Database query error:", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -350,15 +355,18 @@ func (q *Query) FetchFormData() ([]models.FormData, error) {
 			&formData.ClosingTime, &formData.ContactPersonName, &formData.ContactEmailID,
 		)
 		if err != nil {
+			log.Println("Error scanning row:", err)
 			return nil, err
 		}
 		formDatas = append(formDatas, formData)
 	}
 
 	if err = rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
 		return nil, err
 	}
 
+	log.Println("Fetched data for userID:", userID, formDatas)
 	return formDatas, nil
 }
 

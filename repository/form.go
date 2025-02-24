@@ -24,7 +24,6 @@ func NewFormDataRepo(db *sql.DB) *FormDataRepo {
 		db: db,
 	}
 }
-
 func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 	// Set a max file size limit for the multipart form
 	err := r.ParseMultipartForm(10 << 20) // 10MB
@@ -32,17 +31,21 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 		return errors.New("failed to parse multipart form: " + err.Error())
 	}
 
-	// Create channels for errors and file data
-	erChan := make(chan error, 2) // Buffered to handle multiple errors
+	// Create error and file data channels
+	erChan := make(chan error, 2)
 	dataChan1 := make(chan []byte)
 	dataChan2 := make(chan []byte)
 
-	// Goroutine to process file1
+	// Goroutine to process file1 (optional)
 	go func() {
 		file1, _, err := r.FormFile("file1")
 		if err != nil {
-			erChan <- err
-			close(dataChan1) // Ensure channels are closed on error
+			if err == http.ErrMissingFile {
+				dataChan1 <- nil // No file uploaded
+			} else {
+				erChan <- err
+			}
+			close(dataChan1)
 			return
 		}
 		defer file1.Close()
@@ -53,15 +56,19 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 			return
 		}
 		dataChan1 <- file1Data
-		close(dataChan1) // Close after sending data
+		close(dataChan1)
 	}()
 
-	// Goroutine to process file2
+	// Goroutine to process file2 (optional)
 	go func() {
 		file2, _, err := r.FormFile("file2")
 		if err != nil {
-			erChan <- err
-			close(dataChan2) // Ensure channels are closed on error
+			if err == http.ErrMissingFile {
+				dataChan2 <- nil // No file uploaded
+			} else {
+				erChan <- err
+			}
+			close(dataChan2)
 			return
 		}
 		defer file2.Close()
@@ -72,14 +79,13 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 			return
 		}
 		dataChan2 <- file2Data
-		close(dataChan2) // Close after sending data
+		close(dataChan2)
 	}()
 
-	// Wait for both file data or error
+	// Receive data or errors
 	var datas1, datas2 []byte
 	var errOccurred error
 
-	// Wait for data or error from channels
 	select {
 	case errOccurred = <-erChan:
 		if errOccurred != nil {
@@ -89,7 +95,7 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 	case datas2 = <-dataChan2:
 	}
 
-	// Now we unmarshal the JSON data
+	// Unmarshal JSON data
 	var data models.FormData
 	err = json.Unmarshal([]byte(r.FormValue("json_data")), &data)
 	if err != nil {
@@ -99,7 +105,7 @@ func (fdr *FormDataRepo) SubmitFormData(r *http.Request) error {
 	// Ensure employee ID is set
 	data.EmployeeID = uuid.NewString()
 
-	// Store files in the database
+	// Store files only if they exist
 	query := database.NewQuery(fdr.db)
 	err = query.StoreFile(data.UserID, data.EmployeeID, "file1", "file2", datas1, datas2)
 	if err != nil {

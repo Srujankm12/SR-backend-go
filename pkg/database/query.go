@@ -50,34 +50,6 @@ func (q *Query) CreateTables() error {
     		admin_password VARCHAR(100) NOT NULL
 		)
 		`,
-		`(CREATE TABLE IF NOT EXISTS sales_report (
-			report_id SERIAL PRIMARY KEY,
-			user_id VARCHAR(100) NOT NULL,
-			work TEXT NOT NULL,
-			todays_work_plan TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT NOW(),
-			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-		
-		)`,
-		`(
-		CREATE TABLE IF NOT EXISTS site_visit (
-			visit_id SERIAL PRIMARY KEY,
-			user_id VARCHAR(100) NOT NULL,
-			company_name VARCHAR(255) NOT NULL,
-			purpose TEXT NOT NULL,
-			checkin_time TIMESTAMP NOT NULL,
-			checkout_time TIMESTAMP,
-			engineer_name VARCHAR(255) NOT NULL,
-			company_sales_stage VARCHAR(255),
-			visit_on DATE NOT NULL,
-			next_action_plan TEXT,
-			challenges TEXT,
-			visit_rating INT CHECK (visit_rating BETWEEN 1 AND 5),
-			result_of_visit TEXT,
-			notes TEXT,
-			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-
-		)`,
 		`	CREATE TABLE IF NOT EXISTS formdata (
     			user_id VARCHAR(100) NOT NULL,
     			emp_id VARCHAR(100) NOT NULL,
@@ -102,6 +74,30 @@ func (q *Query) CreateTables() error {
 				FOREIGN KEY (emp_id) REFERENCES documents(emp_id) ON DELETE CASCADE
 	)
 		`,
+
+		`CREATE TABLE IF NOT EXISTS login_logout_report (
+			user_id VARCHAR(100) NOT NULL,
+			emp_id VARCHAR(100) NOT NULL,
+			login_time TIMESTAMP NOT NULL DEFAULT NOW(),
+			todays_work_plan TEXT NOT NULL,
+			logout_time TIMESTAMP,
+			total_no_of_visits INT DEFAULT 0,
+			total_no_of_cold_calls INT DEFAULT 0,
+			total_no_of_customer_follow_up INT DEFAULT 0,
+			total_enquiry_generated INT DEFAULT 0,
+			total_enquiry_value DECIMAL(10,2) DEFAULT 0.00,
+			total_order_lost INT DEFAULT 0,
+			total_order_lost_value DECIMAL(10,2) DEFAULT 0.00,
+			total_order_won INT DEFAULT 0,
+			total_order_won_value DECIMAL(10,2) DEFAULT 0.00,
+			customer_follow_up_name TEXT,
+			notes TEXT,
+			tomorrow_goals TEXT,
+			how_was_today TEXT,
+			work_location VARCHAR(50) NOT NULL CHECK (work_location IN ('Office', 'Site')),
+			FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+	);
+`,
 	}
 
 	for _, j := range queries {

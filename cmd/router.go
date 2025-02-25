@@ -15,12 +15,12 @@ import (
 func registerRouter(db *sql.DB) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	router.Use(middlewares.CorsMiddleware)
-
 	// Sales Routes
 	salesRepo := repository.NewSalesRepository(db)
-	salesHandler := handlers.NewSalesHandler(salesRepo.DB)
-	router.HandleFunc("/sales/register", salesHandler.HandleCheckIn).Methods(http.MethodPost)
-	router.HandleFunc("/sales/checkout", salesHandler.HandleCheckOut).Methods(http.MethodPost)
+	salesHandler := handlers.NewSalesHandler(salesRepo)
+	router.HandleFunc("/sales/submit", salesHandler.CreateSalesReport).Methods(http.MethodPost)
+	router.HandleFunc("/sales/logout", salesHandler.HandleLogout).Methods(http.MethodPost)
+	router.HandleFunc("/sales/get", salesHandler.GetSalesReport).Methods(http.MethodGet)
 
 	// Auth Routes
 	authRepo := repository.NewAuth(db)

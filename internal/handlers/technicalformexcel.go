@@ -69,7 +69,7 @@ func (h *TechnicalFormExcelHandler) HandleDownloadExcel(w http.ResponseWriter, r
 		return
 	}
 
-	filePath := fmt.Sprintf("%s/MaterialInward.xlsx", tempDir)
+	filePath := fmt.Sprintf("%s/technical.xlsx", tempDir)
 
 	if err := file.SaveAs(filePath); err != nil {
 		http.Error(w, fmt.Sprintf("Error saving file: %v", err), http.StatusInternalServerError)

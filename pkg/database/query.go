@@ -126,10 +126,15 @@ func (q *Query) CreateTables() error {
 	return nil
 }
 func (q *Query) InsertSalesReport(userID, empID, work, todaysWorkPlan string) error {
+	if userID == "" || empID == "" {
+		return fmt.Errorf("user_id or emp_id is empty, cannot insert sales report")
+	}
+
 	_, err := q.db.Exec(`
 		INSERT INTO sales_reports (user_id, emp_id, work, todays_work_plan, login_time, created_at, report_date)
 		VALUES ($1, $2, $3, $4, NOW(), NOW(), CURRENT_DATE)
-		ON CONFLICT (user_id, report_date) DO NOTHING
+		ON CONFLICT (user_id, report_date) 
+		DO UPDATE SET work = EXCLUDED.work, todays_work_plan = EXCLUDED.todays_work_plan
 	`, userID, empID, work, todaysWorkPlan)
 
 	if err != nil {

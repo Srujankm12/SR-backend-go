@@ -16,9 +16,8 @@ func NewSalesRepository(db *sql.DB) *SalesRepository {
 	return &SalesRepository{db: db}
 }
 
-// Insert sales report and generate emp_id after submission
 func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string) (string, error) {
-	// Insert sales report (ensures report exists)
+
 	_, err := r.db.Exec(`
         INSERT INTO sales_reports (user_id, work, todays_work_plan, login_time, created_at, report_date)
         VALUES ($1, $2, $3, NOW(), NOW(), CURRENT_DATE)
@@ -29,7 +28,6 @@ func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string)
 		return "", fmt.Errorf("failed to insert sales report: %v", err)
 	}
 
-	// Check if emp_id exists
 	var empID sql.NullString
 	err = r.db.QueryRow(`
         SELECT emp_id FROM sales_reports WHERE user_id = $1 AND report_date = CURRENT_DATE
@@ -40,7 +38,7 @@ func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string)
 	}
 
 	if !empID.Valid {
-		// Generate and assign a new emp_id
+
 		newEmpID := uuid.New().String()
 		_, err = r.db.Exec(`
             UPDATE sales_reports SET emp_id = $1 WHERE user_id = $2 AND report_date = CURRENT_DATE
@@ -55,7 +53,6 @@ func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string)
 	return empID.String, nil
 }
 
-// Get today's sales report by user_id
 func (r *SalesRepository) GetSalesReport(userID string) (*models.SalesReport, error) {
 	var report models.SalesReport
 
@@ -108,7 +105,6 @@ func (r *SalesRepository) UpdateSalesReport(userID, work, todaysWorkPlan string)
 	return nil
 }
 
-// Check if a user has already logged in today
 func (r *SalesRepository) HasUserLoggedInToday(userID string) (bool, error) {
 	var exists bool
 	err := r.db.QueryRow(`
@@ -129,12 +125,10 @@ func (r *SalesRepository) InsertLogoutSummary(
 	totalNoOfVisits, totalNoOfColdCalls, totalNoOfFollowUps, totalEnquiryGenerated, totalOrderLost, totalOrderWon int,
 	totalEnquiryValue, totalOrderLostValue, totalOrderWonValue float64) error {
 
-	// Ensure empID is not empty
 	if empID == "" {
 		return fmt.Errorf("emp_id is required to log out")
 	}
 
-	// Insert into logout_summaries
 	_, err := r.db.Exec(`
        INSERT INTO logout_summaries (
     user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,

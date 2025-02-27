@@ -94,11 +94,11 @@ func (q *Query) CreateTables() error {
 			total_no_of_cold_calls INT DEFAULT 0,
 			total_no_of_follow_ups INT DEFAULT 0,
 			total_enquiry_generated INT DEFAULT 0,
-			total_enquiry_value INT DEFAULT 0,
+			total_enquiry_value NUMERIC(10,2) DEFAULT 0,
 			total_order_lost INT DEFAULT 0,
-			total_order_lost_value INT DEFAULT 0,
+			total_order_lost_value NUMERIC(10,2) DEFAULT 0,
 			total_order_won INT DEFAULT 0,
-			total_order_won_value INT DEFAULT 0,
+			total_order_won_value NUMERIC(10,2) DEFAULT 0,
 			customer_follow_up_name TEXT,
 			notes TEXT,
 			tomorrow_goals TEXT,
@@ -108,10 +108,8 @@ func (q *Query) CreateTables() error {
 			report_date DATE NOT NULL DEFAULT CURRENT_DATE,
 			PRIMARY KEY (user_id, report_date),
 			FOREIGN KEY (user_id, report_date) 
-				REFERENCES sales_reports(user_id, report_date) 
-				ON DELETE CASCADE
-
-
+			REFERENCES sales_reports(user_id, report_date) 
+			ON DELETE CASCADE
 
 		)`,
 	}
@@ -189,6 +187,38 @@ func (q *Query) InsertLogoutSummary(
 		return fmt.Errorf("failed to insert logout summary: %v", err)
 	}
 	return nil
+}
+func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) {
+	rows, err := q.db.Query(`
+		SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
+		total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
+		total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
+		how_was_today, work_location, logout_time
+	FROM logout_summaries
+	WHERE user_id = $1
+	AND report_date::date = CURRENT_DATE
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch logout summary: %v", err)
+	}
+
+	defer rows.Close()
+	var summaries []models.LogoutSummary
+	for rows.Next() {
+		var summary models.LogoutSummary
+		err := rows.Scan(
+			&summary.UserID, &summary.EmployeeID, &summary.TotalNoOfVisits, &summary.TotalNoOfColdCalls, &summary.TotalNoOfFollowUps,
+			&summary.TotalEnquiryGenerated, &summary.TotalEnquiryValue, &summary.TotalOrderLost, &summary.TotalOrderLostValue,
+			&summary.TotalOrderWon, &summary.TotalOrderWonValue, &summary.CustomerFollowUpName, &summary.Notes, &summary.TomorrowGoals,
+			&summary.HowWasToday, &summary.WorkLocation, &summary.LogoutTime,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan logout summary: %v", err)
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries, nil
+
 }
 
 func (q *Query) Register(userid, email, password string) error {

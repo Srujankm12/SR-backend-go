@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -127,6 +129,10 @@ func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	// Fetch emp_id for the user from today's sales report
 	empID, err := h.Repo.GetEmpIDByUserID(request.UserID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, `{"error": "Employee not found for this user ID"}`, http.StatusNotFound)
+			return
+		}
 		http.Error(w, fmt.Sprintf(`{"error": "%s"}`, err.Error()), http.StatusInternalServerError)
 		return
 	}
@@ -136,7 +142,7 @@ func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		request.UserID, empID, request.CustomerFollowUpName, request.Notes, request.TomorrowGoals,
 		request.HowWasToday, request.WorkLocation, request.TotalNoOfVisits, request.TotalNoOfColdCalls,
 		request.TotalNoOfFollowUps, request.TotalEnquiryGenerated, request.TotalOrderLost, request.TotalOrderWon,
-		request.TotalOrderLostValue, request.TotalOrderWonValue, request.TotalEnquiryValue,
+		request.TotalEnquiryValue, request.TotalOrderLostValue, request.TotalOrderWonValue,
 	)
 
 	// Handle errors
@@ -151,4 +157,26 @@ func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		"message": "Logout summary recorded successfully",
 		"emp_id":  empID,
 	})
+}
+func (h *SalesHandler) GetLogoutSummary(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	empID := vars["id"] // Fetching emp_id from the URL path
+
+	if empID == "" {
+		http.Error(w, `{"error": "emp_id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	summary, err := h.Repo.GetLogoutSummary(empID)
+	if err != nil {
+		if err.Error() == fmt.Sprintf("no logout summary found for emp_id %s", empID) {
+			http.Error(w, `{"error": "No logout summary found"}`, http.StatusNotFound)
+		} else {
+			http.Error(w, `{"error": "Failed to fetch logout summary"}`, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(summary)
 }

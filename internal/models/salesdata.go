@@ -19,11 +19,11 @@ type LogoutSummary struct {
 	TotalNoOfColdCalls    int       `json:"total_no_of_cold_calls"`
 	TotalNoOfFollowUps    int       `json:"total_no_of_follow_ups"`
 	TotalEnquiryGenerated int       `json:"total_enquiry_generated"`
-	TotalEnquiryValue     int       `json:"total_enquiry_value"`
+	TotalEnquiryValue     float64   `json:"total_enquiry_value"`
 	TotalOrderLost        int       `json:"total_order_lost"`
-	TotalOrderLostValue   int       `json:"total_order_lost_value"`
+	TotalOrderLostValue   float64   `json:"total_order_lost_value"`
 	TotalOrderWon         int       `json:"total_order_won"`
-	TotalOrderWonValue    int       `json:"total_order_won_value"`
+	TotalOrderWonValue    float64   `json:"total_order_won_value"`
 	CustomerFollowUpName  string    `json:"customer_follow_up_name"`
 	Notes                 string    `json:"notes"`
 	TomorrowGoals         string    `json:"tomorrow_goals"`

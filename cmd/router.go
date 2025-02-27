@@ -21,6 +21,7 @@ func registerRouter(db *sql.DB) *mux.Router {
 	router.HandleFunc("/sales/submit", salesHandler.CreateSalesReport).Methods(http.MethodPost)
 	router.HandleFunc("/sales/logout", salesHandler.HandleLogout).Methods(http.MethodPost)
 	router.HandleFunc("/sales/get/{id}", salesHandler.GetSalesReport).Methods(http.MethodGet)
+	router.HandleFunc("/sales/getdeatils/{id}", salesHandler.GetLogoutSummary).Methods(http.MethodGet)
 
 	// Auth Routes
 	authRepo := repository.NewAuth(db)

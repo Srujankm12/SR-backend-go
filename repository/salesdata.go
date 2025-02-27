@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Srujankm12/SRproject/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -16,7 +17,6 @@ func NewSalesRepository(db *sql.DB) *SalesRepository {
 	return &SalesRepository{db: db}
 }
 
-// Insert sales report with conflict handling
 func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string) (string, error) {
 	_, err := r.db.Exec(`
         INSERT INTO sales_reports (user_id, work, todays_work_plan, login_time, created_at, report_date)
@@ -54,9 +54,8 @@ func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string)
 	return empID.String, nil
 }
 
-// Get sales report
 func (r *SalesRepository) FetchSalesReport(userID string) (*SalesReport, error) {
-	fmt.Println("Querying sales report for user ID:", userID) // Debugging log
+	fmt.Println("Querying sales report for user ID:", userID)
 
 	var report SalesReport
 	query := `
@@ -82,7 +81,6 @@ func (r *SalesRepository) FetchSalesReport(userID string) (*SalesReport, error) 
 	return &report, nil
 }
 
-// Struct for SalesReport
 type SalesReport struct {
 	UserID         string
 	EmpID          string
@@ -93,7 +91,6 @@ type SalesReport struct {
 	ReportDate     time.Time
 }
 
-// Get employee ID by user ID
 func (r *SalesRepository) GetEmpIDByUserID(userID string) (string, error) {
 	var empID string
 	query := `
@@ -110,7 +107,6 @@ func (r *SalesRepository) GetEmpIDByUserID(userID string) (string, error) {
 	return empID, nil
 }
 
-// Check if user has logged in today
 func (r *SalesRepository) HasUserLoggedInToday(userID string) (bool, error) {
 	var exists bool
 	err := r.db.QueryRow(`
@@ -137,22 +133,53 @@ func (r *SalesRepository) InsertLogoutSummary(
 
 	_, err := r.db.Exec(`
        INSERT INTO logout_summaries (
-    user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
-    total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
-    total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
-    how_was_today, work_location, logout_time, report_date
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), CURRENT_DATE
-)
-
-    `, userID, empID, totalNoOfVisits, totalNoOfColdCalls, totalNoOfFollowUps,
+           user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
+           total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
+           total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
+           how_was_today, work_location, logout_time, report_date
+       ) VALUES (
+           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), CURRENT_DATE
+       )`,
+		userID, empID, totalNoOfVisits, totalNoOfColdCalls, totalNoOfFollowUps,
 		totalEnquiryGenerated, totalEnquiryValue, totalOrderLost, totalOrderLostValue,
 		totalOrderWon, totalOrderWonValue, customerFollowUpName, notes, tomorrowGoals,
-		howWasToday, workLocation)
+		howWasToday, workLocation,
+	)
 
 	if err != nil {
-		return fmt.Errorf("failed to insert logout summary: %v", err)
+		return fmt.Errorf("failed to insert logout summary for user %s: %w", userID, err)
 	}
 
 	return nil
+}
+
+func (r *SalesRepository) GetLogoutSummary(empID string) (*models.LogoutSummary, error) {
+	if empID == "" {
+		return nil, fmt.Errorf("emp_id is required to fetch logout summary")
+	}
+
+	var summary models.LogoutSummary
+	err := r.db.QueryRow(`
+        SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
+               total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
+               total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
+               how_was_today, work_location, logout_time
+        FROM logout_summaries
+        WHERE emp_id = $1
+        ORDER BY logout_time DESC
+        LIMIT 1`, empID).Scan(
+		&summary.UserID, &summary.EmployeeID, &summary.TotalNoOfVisits, &summary.TotalNoOfColdCalls, &summary.TotalNoOfFollowUps,
+		&summary.TotalEnquiryGenerated, &summary.TotalEnquiryValue, &summary.TotalOrderLost, &summary.TotalOrderLostValue,
+		&summary.TotalOrderWon, &summary.TotalOrderWonValue, &summary.CustomerFollowUpName, &summary.Notes, &summary.TomorrowGoals,
+		&summary.HowWasToday, &summary.WorkLocation, &summary.LogoutTime,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("no logout summary found for emp_id %s", empID)
+		}
+		return nil, fmt.Errorf("failed to fetch logout summary for emp_id %s: %w", empID, err)
+	}
+
+	return &summary, nil
 }

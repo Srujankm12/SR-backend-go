@@ -9,6 +9,7 @@ type SalesReport struct {
 	TodaysWorkPlan string    `json:"todays_work_plan"`
 	LoginTime      time.Time `json:"login_time"`
 	CreatedAt      time.Time `json:"created_at"`
+	ReportDate     string    `json:"report_date"`
 }
 
 type LogoutSummary struct {

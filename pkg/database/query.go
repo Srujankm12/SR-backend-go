@@ -142,7 +142,30 @@ func (q *Query) InsertSalesReport(userID, empID, work, todaysWorkPlan string) er
 	}
 	return nil
 }
+func (q *Query) GetSalesReport(userID string) ([]models.SalesReport, error) {
+	rows, err := q.db.Query(`
+		SELECT user_id, emp_id, work, todays_work_plan, login_time, created_at, report_date 
+	FROM sales_reports 
+	WHERE user_id = $1 
+	AND report_date::date = CURRENT_DATE
 
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch sales reports: %v", err)
+	}
+	defer rows.Close()
+
+	var reports []models.SalesReport
+	for rows.Next() {
+		var report models.SalesReport
+		err := rows.Scan(&report.UserID, &report.EmployeeID, &report.Work, &report.TodaysWorkPlan, &report.LoginTime, &report.CreatedAt, &report.ReportDate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan sales report: %v", err)
+		}
+		reports = append(reports, report)
+	}
+	return reports, nil
+}
 func (q *Query) InsertLogoutSummary(
 	userID, empID, customerFollowUpName, notes, tomorrowGoals, howWasToday, workLocation string,
 	totalNoOfVisits, totalNoOfColdCalls, totalNoOfFollowUps, totalEnquiryGenerated, totalOrderLost, totalOrderWon int,
@@ -297,7 +320,6 @@ func (q *Query) FetchFormData(userID string) ([]models.FormData, error) {
 	log.Println("Fetched data for userID:", userID, formDatas)
 	return formDatas, nil
 }
-
 func (q *Query) AdminFetchFormData() ([]models.FormData, error) {
 	var formDatas []models.FormData
 

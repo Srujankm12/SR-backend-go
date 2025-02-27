@@ -3,8 +3,8 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
-	"github.com/Srujankm12/SRproject/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -16,11 +16,11 @@ func NewSalesRepository(db *sql.DB) *SalesRepository {
 	return &SalesRepository{db: db}
 }
 
+// Insert sales report with conflict handling
 func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string) (string, error) {
-
 	_, err := r.db.Exec(`
         INSERT INTO sales_reports (user_id, work, todays_work_plan, login_time, created_at, report_date)
-        VALUES ($1, $2, $3, NOW(), NOW(), CURRENT_DATE)
+        VALUES ($1, $2, $3, NOW(), NOW(), CURRENT_DATE AT TIME ZONE 'UTC')
         ON CONFLICT (user_id, report_date) DO NOTHING
     `, userID, work, todaysWorkPlan)
 
@@ -30,7 +30,8 @@ func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string)
 
 	var empID sql.NullString
 	err = r.db.QueryRow(`
-        SELECT emp_id FROM sales_reports WHERE user_id = $1 AND report_date = CURRENT_DATE
+        SELECT emp_id FROM sales_reports 
+        WHERE user_id = $1 AND report_date = CURRENT_DATE AT TIME ZONE 'UTC'
     `, userID).Scan(&empID)
 
 	if err != nil && err != sql.ErrNoRows {
@@ -38,10 +39,10 @@ func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string)
 	}
 
 	if !empID.Valid {
-
 		newEmpID := uuid.New().String()
 		_, err = r.db.Exec(`
-            UPDATE sales_reports SET emp_id = $1 WHERE user_id = $2 AND report_date = CURRENT_DATE
+            UPDATE sales_reports SET emp_id = $1 
+            WHERE user_id = $2 AND report_date = CURRENT_DATE AT TIME ZONE 'UTC'
         `, newEmpID, userID)
 
 		if err != nil {
@@ -53,21 +54,27 @@ func (r *SalesRepository) InsertSalesReport(userID, work, todaysWorkPlan string)
 	return empID.String, nil
 }
 
-func (r *SalesRepository) GetSalesReport(userID string) (*models.SalesReport, error) {
-	var report models.SalesReport
+// Get sales report
+func (r *SalesRepository) FetchSalesReport(userID string) (*SalesReport, error) {
+	fmt.Println("Querying sales report for user ID:", userID) // Debugging log
 
-	err := r.db.QueryRow(`
-		SELECT user_id, emp_id, work, todays_work_plan, login_time, created_at 
-		FROM sales_reports 
-		WHERE user_id = $1 AND report_date = CURRENT_DATE
-	`, userID).Scan(
-		&report.UserID, &report.EmployeeID, &report.Work, &report.TodaysWorkPlan,
-		&report.LoginTime, &report.CreatedAt,
+	var report SalesReport
+	query := `
+		SELECT user_id, emp_id, work, todays_work_plan, login_time, created_at, report_date 
+	FROM sales_reports 
+	WHERE user_id = $1 
+	AND report_date::date = CURRENT_DATE
+
+	`
+	err := r.db.QueryRow(query, userID).Scan(
+		&report.UserID, &report.EmpID, &report.Work,
+		&report.TodaysWorkPlan, &report.LoginTime,
+		&report.CreatedAt, &report.ReportDate,
 	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("sales report not found")
+			return nil, fmt.Errorf("no sales report found for today")
 		}
 		return nil, fmt.Errorf("failed to fetch sales report: %v", err)
 	}
@@ -75,11 +82,23 @@ func (r *SalesRepository) GetSalesReport(userID string) (*models.SalesReport, er
 	return &report, nil
 }
 
+// Struct for SalesReport
+type SalesReport struct {
+	UserID         string
+	EmpID          string
+	Work           string
+	TodaysWorkPlan string
+	LoginTime      time.Time
+	CreatedAt      time.Time
+	ReportDate     time.Time
+}
+
+// Get employee ID by user ID
 func (r *SalesRepository) GetEmpIDByUserID(userID string) (string, error) {
 	var empID string
 	query := `
 		SELECT emp_id FROM sales_reports 
-		WHERE user_id = $1 AND report_date = (SELECT CURRENT_DATE AT TIME ZONE 'UTC')
+		WHERE user_id = $1 AND report_date = CURRENT_DATE AT TIME ZONE 'UTC'
 	`
 	err := r.db.QueryRow(query, userID).Scan(&empID)
 	if err != nil {
@@ -91,25 +110,12 @@ func (r *SalesRepository) GetEmpIDByUserID(userID string) (string, error) {
 	return empID, nil
 }
 
-func (r *SalesRepository) UpdateSalesReport(userID, work, todaysWorkPlan string) error {
-	_, err := r.db.Exec(`
-		UPDATE sales_reports 
-		SET work = $1, todays_work_plan = $2 
-		WHERE user_id = $3 AND report_date = CURRENT_DATE
-	`, work, todaysWorkPlan, userID)
-
-	if err != nil {
-		return fmt.Errorf("failed to update sales report: %v", err)
-	}
-
-	return nil
-}
-
+// Check if user has logged in today
 func (r *SalesRepository) HasUserLoggedInToday(userID string) (bool, error) {
 	var exists bool
 	err := r.db.QueryRow(`
 		SELECT EXISTS (
-			SELECT 1 FROM sales_reports WHERE user_id = $1 AND report_date = CURRENT_DATE
+			SELECT 1 FROM sales_reports WHERE user_id = $1 AND report_date = CURRENT_DATE AT TIME ZONE 'UTC'
 		)
 	`, userID).Scan(&exists)
 
@@ -133,7 +139,7 @@ func (r *SalesRepository) InsertLogoutSummary(
        INSERT INTO logout_summaries (
     user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
     total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
-    total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals, 
+    total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
     how_was_today, work_location, logout_time, report_date
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), CURRENT_DATE

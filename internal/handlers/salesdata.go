@@ -5,99 +5,89 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/Srujankm12/SRproject/repository"
 	"github.com/gorilla/mux"
 )
 
+// SalesHandler handles sales-related HTTP requests.
 type SalesHandler struct {
 	Repo *repository.SalesRepository
 }
 
-// NewSalesHandler initializes a new SalesHandler
 func NewSalesHandler(repo *repository.SalesRepository) *SalesHandler {
 	return &SalesHandler{Repo: repo}
 }
 
-// Create a new sales report
-func (h *SalesHandler) CreateSalesReport(w http.ResponseWriter, r *http.Request) {
+func sendJSONResponse(w http.ResponseWriter, statusCode int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(payload)
+}
 
+func sendJSONError(w http.ResponseWriter, statusCode int, message string) {
+	sendJSONResponse(w, statusCode, map[string]string{"error": message})
+}
+
+func (h *SalesHandler) CreateSalesReport(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		UserID         string `json:"user_id"` // Ideally, user_id should come from authentication middleware
+		UserID         string `json:"user_id"`
 		Work           string `json:"work"`
 		TodaysWorkPlan string `json:"todays_work_plan"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, `{"error": "Invalid request payload"}`, http.StatusBadRequest)
+		sendJSONError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	// Insert sales report and generate emp_id
+	if request.UserID == "" || request.Work == "" || request.TodaysWorkPlan == "" {
+		sendJSONError(w, http.StatusBadRequest, "Missing required fields")
+		return
+	}
+
 	empID, err := h.Repo.InsertSalesReport(request.UserID, request.Work, request.TodaysWorkPlan)
 	if err != nil {
-		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		sendJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to create sales report: %v", err))
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
+	sendJSONResponse(w, http.StatusCreated, map[string]string{
 		"message": "Sales report created successfully",
 		"emp_id":  empID,
 	})
 }
 
-// Handle fetching a sales report
 func (h *SalesHandler) GetSalesReport(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userID := vars["id"] // Extract user ID from URL
+	userID := vars["id"] // Extract user_id from URL path
 
-	fmt.Println("Received request for user ID:", userID) // Log for debugging
-
-	report, err := h.Repo.FetchSalesReport(userID)
-	if err != nil {
-		fmt.Println("Sales report not found for user ID:", userID) // Additional log
-		http.Error(w, `{"error": "Sales report not found"}`, http.StatusNotFound)
+	if userID == "" {
+		sendJSONError(w, http.StatusBadRequest, "User ID is required")
 		return
 	}
 
-	// Set Content-Type header
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(report)
+	log.Println("Fetching report for user ID:", userID) // Debugging log
+
+	report, err := h.Repo.FetchSalesReport(userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			sendJSONError(w, http.StatusNotFound, "No sales report found for today")
+		} else {
+			sendJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch sales report: %v", err))
+		}
+		return
+	}
+
+	sendJSONResponse(w, http.StatusOK, report)
 }
 
-// // Handle updating a sales report
-// func (h *SalesHandler) UpdateSalesReport(w http.ResponseWriter, r *http.Request) {
-// 	w.Header().Set("Content-Type", "application/json")
-
-// 	var request struct {
-// 		UserID         string `json:"user_id"`
-// 		Work           string `json:"work"`
-// 		TodaysWorkPlan string `json:"todays_work_plan"`
-// 	}
-
-// 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-// 		http.Error(w, `{"error": "Invalid request payload"}`, http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	err := h.Repo.UpdateSalesReport(request.UserID, request.Work, request.TodaysWorkPlan)
-// 	if err != nil {
-// 		http.Error(w, `{"error": "Failed to update sales report"}`, http.StatusInternalServerError)
-// 		return
-// 	}
-
-//		w.WriteHeader(http.StatusOK)
-//		json.NewEncoder(w).Encode(map[string]string{"message": "Sales report updated successfully"})
-//	}
 func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	// Define request payload structure
 	var request struct {
 		UserID                string  `json:"user_id"`
+		EmpID                 string  `json:"emp_id"`
 		TotalNoOfVisits       int     `json:"total_no_of_visits"`
 		TotalNoOfColdCalls    int     `json:"total_no_of_cold_calls"`
 		TotalNoOfFollowUps    int     `json:"total_no_of_follow_ups"`
@@ -114,15 +104,14 @@ func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		WorkLocation          string  `json:"work_location"`
 	}
 
-	// Decode the request body
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, `{"error": "Invalid request payload"}`, http.StatusBadRequest)
+		sendJSONError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	// Ensure user_id is provided
+	// Ensure required fields are provided
 	if request.UserID == "" {
-		http.Error(w, `{"error": "User ID is required"}`, http.StatusBadRequest)
+		sendJSONError(w, http.StatusBadRequest, "User ID is required")
 		return
 	}
 
@@ -130,53 +119,47 @@ func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	empID, err := h.Repo.GetEmpIDByUserID(request.UserID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, `{"error": "Employee not found for this user ID"}`, http.StatusNotFound)
-			return
+			sendJSONError(w, http.StatusNotFound, "Employee not found for this user ID")
+		} else {
+			sendJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch emp_id: %v", err))
 		}
-		http.Error(w, fmt.Sprintf(`{"error": "%s"}`, err.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	// Call repository method to insert the logout summary
+	// Insert the logout summary
 	err = h.Repo.InsertLogoutSummary(
-		request.UserID, empID, request.CustomerFollowUpName, request.Notes, request.TomorrowGoals,
+		request.UserID, request.EmpID, request.CustomerFollowUpName, request.Notes, request.TomorrowGoals,
 		request.HowWasToday, request.WorkLocation, request.TotalNoOfVisits, request.TotalNoOfColdCalls,
 		request.TotalNoOfFollowUps, request.TotalEnquiryGenerated, request.TotalOrderLost, request.TotalOrderWon,
 		request.TotalEnquiryValue, request.TotalOrderLostValue, request.TotalOrderWonValue,
 	)
-
-	// Handle errors
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "%s"}`, err.Error()), http.StatusInternalServerError)
+		sendJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to insert logout summary: %v", err))
 		return
 	}
 
-	// Success response
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
+	sendJSONResponse(w, http.StatusCreated, map[string]string{
 		"message": "Logout summary recorded successfully",
 		"emp_id":  empID,
 	})
 }
 func (h *SalesHandler) GetLogoutSummary(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	empID := vars["id"] // Fetching emp_id from the URL path
-
-	if empID == "" {
-		http.Error(w, `{"error": "emp_id is required"}`, http.StatusBadRequest)
+	userID := mux.Vars(r)["id"] // Extract user_id from URL
+	if userID == "" {
+		sendJSONError(w, http.StatusBadRequest, "user_id is required")
 		return
 	}
 
-	summary, err := h.Repo.GetLogoutSummary(empID)
+	// Fetch logout history using user_id directly
+	summary, err := h.Repo.GetLogoutSummary(userID)
 	if err != nil {
-		if err.Error() == fmt.Sprintf("no logout summary found for emp_id %s", empID) {
-			http.Error(w, `{"error": "No logout summary found"}`, http.StatusNotFound)
+		if errors.Is(err, sql.ErrNoRows) {
+			sendJSONError(w, http.StatusNotFound, fmt.Sprintf("No logout history found for user_id %s", userID))
 		} else {
-			http.Error(w, `{"error": "Failed to fetch logout summary"}`, http.StatusInternalServerError)
+			sendJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch logout summary: %v", err))
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(summary)
+	sendJSONResponse(w, http.StatusOK, summary)
 }

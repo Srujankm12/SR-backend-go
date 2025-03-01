@@ -14,7 +14,7 @@ type SalesReport struct {
 
 type LogoutSummary struct {
 	UserID                string    `json:"user_id"`
-	EmployeeID            string    `json:"emp_id"`
+	EmpID                 string    `json:"emp_id"`
 	TotalNoOfVisits       int       `json:"total_no_of_visits"`
 	TotalNoOfColdCalls    int       `json:"total_no_of_cold_calls"`
 	TotalNoOfFollowUps    int       `json:"total_no_of_follow_ups"`
@@ -30,4 +30,5 @@ type LogoutSummary struct {
 	HowWasToday           string    `json:"how_was_today"`
 	WorkLocation          string    `json:"work_location"`
 	LogoutTime            time.Time `json:"logout_time"`
+	ReportDate            string    `json:"report_date"`
 }

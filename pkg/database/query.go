@@ -132,7 +132,10 @@ func (q *Query) InsertSalesReport(userID, empID, work, todaysWorkPlan string) er
 		INSERT INTO sales_reports (user_id, emp_id, work, todays_work_plan, login_time, created_at, report_date)
 		VALUES ($1, $2, $3, $4, NOW(), NOW(), CURRENT_DATE)
 		ON CONFLICT (user_id, report_date) 
-		DO UPDATE SET work = EXCLUDED.work, todays_work_plan = EXCLUDED.todays_work_plan
+		DO UPDATE SET 
+			work = EXCLUDED.work, 
+			todays_work_plan = EXCLUDED.todays_work_plan,
+			emp_id = COALESCE(sales_reports.emp_id, EXCLUDED.emp_id)
 	`, userID, empID, work, todaysWorkPlan)
 
 	if err != nil {
@@ -140,14 +143,15 @@ func (q *Query) InsertSalesReport(userID, empID, work, todaysWorkPlan string) er
 	}
 	return nil
 }
+
 func (q *Query) GetSalesReport(userID string) ([]models.SalesReport, error) {
 	rows, err := q.db.Query(`
 		SELECT user_id, emp_id, work, todays_work_plan, login_time, created_at, report_date 
-	FROM sales_reports 
-	WHERE user_id = $1 
-	AND report_date::date = CURRENT_DATE
-
+		FROM sales_reports 
+		WHERE user_id = $1 
+		AND report_date = CURRENT_DATE
 	`, userID)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch sales reports: %v", err)
 	}
@@ -164,6 +168,7 @@ func (q *Query) GetSalesReport(userID string) ([]models.SalesReport, error) {
 	}
 	return reports, nil
 }
+
 func (q *Query) InsertLogoutSummary(
 	userID, empID, customerFollowUpName, notes, tomorrowGoals, howWasToday, workLocation string,
 	totalNoOfVisits, totalNoOfColdCalls, totalNoOfFollowUps, totalEnquiryGenerated, totalOrderLost, totalOrderWon int,
@@ -174,9 +179,9 @@ func (q *Query) InsertLogoutSummary(
 			user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
 			total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
 			total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals, 
-			how_was_today, work_location, logout_time
+			how_was_today, work_location, logout_time, report_date
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), CURRENT_DATE
 		)
 	`, userID, empID, totalNoOfVisits, totalNoOfColdCalls, totalNoOfFollowUps,
 		totalEnquiryGenerated, totalEnquiryValue, totalOrderLost, totalOrderLostValue,
@@ -188,16 +193,18 @@ func (q *Query) InsertLogoutSummary(
 	}
 	return nil
 }
+
 func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) {
 	rows, err := q.db.Query(`
 		SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
 		total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
 		total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
 		how_was_today, work_location, logout_time
-	FROM logout_summaries
-	WHERE user_id = $1
-	AND report_date::date = CURRENT_DATE
+		FROM logout_summaries
+		WHERE user_id = $1
+		AND report_date = CURRENT_DATE
 	`, userID)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch logout summary: %v", err)
 	}
@@ -207,7 +214,7 @@ func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) 
 	for rows.Next() {
 		var summary models.LogoutSummary
 		err := rows.Scan(
-			&summary.UserID, &summary.EmployeeID, &summary.TotalNoOfVisits, &summary.TotalNoOfColdCalls, &summary.TotalNoOfFollowUps,
+			&summary.UserID, &summary.EmpID, &summary.TotalNoOfVisits, &summary.TotalNoOfColdCalls, &summary.TotalNoOfFollowUps,
 			&summary.TotalEnquiryGenerated, &summary.TotalEnquiryValue, &summary.TotalOrderLost, &summary.TotalOrderLostValue,
 			&summary.TotalOrderWon, &summary.TotalOrderWonValue, &summary.CustomerFollowUpName, &summary.Notes, &summary.TomorrowGoals,
 			&summary.HowWasToday, &summary.WorkLocation, &summary.LogoutTime,
@@ -218,7 +225,6 @@ func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) 
 		summaries = append(summaries, summary)
 	}
 	return summaries, nil
-
 }
 
 func (q *Query) Register(userid, email, password string) error {

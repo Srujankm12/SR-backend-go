@@ -174,7 +174,26 @@ func (q *Query) InsertLogoutSummary(
 	totalNoOfVisits, totalNoOfColdCalls, totalNoOfFollowUps, totalEnquiryGenerated, totalOrderLost, totalOrderWon int,
 	totalEnquiryValue, totalOrderLostValue, totalOrderWonValue float64) error {
 
-	_, err := q.db.Exec(`
+	// Step 1: Check if the user has already logged out today
+	var exists bool
+	err := q.db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM logout_summaries 
+			WHERE user_id = $1 AND report_date = CURRENT_DATE
+		)
+	`, userID).Scan(&exists)
+
+	if err != nil {
+		return fmt.Errorf("error checking logout existence: %v", err)
+	}
+
+	// Step 2: Prevent duplicate insertions
+	if exists {
+		return fmt.Errorf("user has already logged out today")
+	}
+
+	// Step 3: Insert new logout record if none exists
+	_, err = q.db.Exec(`
 		INSERT INTO logout_summaries (
 			user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
 			total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
@@ -191,6 +210,7 @@ func (q *Query) InsertLogoutSummary(
 	if err != nil {
 		return fmt.Errorf("failed to insert logout summary: %v", err)
 	}
+
 	return nil
 }
 

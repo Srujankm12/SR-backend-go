@@ -83,11 +83,9 @@ func (h *SalesHandler) GetSalesReport(w http.ResponseWriter, r *http.Request) {
 
 	sendJSONResponse(w, http.StatusOK, report)
 }
-
 func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		UserID                string  `json:"user_id"`
-		EmpID                 string  `json:"emp_id"`
 		TotalNoOfVisits       int     `json:"total_no_of_visits"`
 		TotalNoOfColdCalls    int     `json:"total_no_of_cold_calls"`
 		TotalNoOfFollowUps    int     `json:"total_no_of_follow_ups"`
@@ -126,9 +124,21 @@ func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert the logout summary
+	// Check if user has already logged out today
+	exists, err := h.Repo.CheckLogoutExists(request.UserID)
+	if err != nil {
+		sendJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to check logout status: %v", err))
+		return
+	}
+
+	if exists {
+		sendJSONError(w, http.StatusConflict, "User has already logged out today")
+		return
+	}
+
+	// Insert the logout summary using the fetched empID
 	err = h.Repo.InsertLogoutSummary(
-		request.UserID, request.EmpID, request.CustomerFollowUpName, request.Notes, request.TomorrowGoals,
+		request.UserID, empID, request.CustomerFollowUpName, request.Notes, request.TomorrowGoals,
 		request.HowWasToday, request.WorkLocation, request.TotalNoOfVisits, request.TotalNoOfColdCalls,
 		request.TotalNoOfFollowUps, request.TotalEnquiryGenerated, request.TotalOrderLost, request.TotalOrderWon,
 		request.TotalEnquiryValue, request.TotalOrderLostValue, request.TotalOrderWonValue,
@@ -143,6 +153,7 @@ func (h *SalesHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		"emp_id":  empID,
 	})
 }
+
 func (h *SalesHandler) GetLogoutSummary(w http.ResponseWriter, r *http.Request) {
 	userID := mux.Vars(r)["id"] // Extract user_id from URL
 	if userID == "" {

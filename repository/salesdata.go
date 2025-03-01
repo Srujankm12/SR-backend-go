@@ -105,11 +105,30 @@ func (r *SalesRepository) InsertLogoutSummary(
 	totalNoOfVisits, totalNoOfColdCalls, totalNoOfFollowUps, totalEnquiryGenerated, totalOrderLost, totalOrderWon int,
 	totalEnquiryValue, totalOrderLostValue, totalOrderWonValue float64) error {
 
+	// Step 1: Ensure required fields are provided
 	if userID == "" || empID == "" {
 		return fmt.Errorf("user_id and emp_id are required to log out")
 	}
 
-	_, err := r.db.Exec(`
+	// Step 2: Check if a logout record already exists for today
+	var exists bool
+	err := r.db.QueryRow(`
+        SELECT EXISTS (
+            SELECT 1 FROM logout_summaries 
+            WHERE user_id = $1 AND report_date = timezone('UTC', NOW())::DATE
+        )`, userID).Scan(&exists)
+
+	if err != nil {
+		return fmt.Errorf("error checking logout existence: %w", err)
+	}
+
+	// Step 3: If already logged out, return an error
+	if exists {
+		return fmt.Errorf("user has already logged out today")
+	}
+
+	// Step 4: Insert the logout record if it doesn't exist
+	_, err = r.db.Exec(`
         INSERT INTO logout_summaries (
             user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
             total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
@@ -130,6 +149,7 @@ func (r *SalesRepository) InsertLogoutSummary(
 
 	return nil
 }
+
 func (r *SalesRepository) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) {
 	if userID == "" {
 		return nil, fmt.Errorf("user_id is required to fetch logout summary")
@@ -187,4 +207,17 @@ func (r *SalesRepository) GetEmpIDByUserID(userID string) (string, error) {
 		return "", fmt.Errorf("failed to fetch emp_id: %v", err)
 	}
 	return empID, nil
+}
+func (r *SalesRepository) CheckLogoutExists(userID string) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM logout_summaries 
+			WHERE user_id = $1 AND report_date = timezone('UTC', NOW())::DATE
+		)`, userID).Scan(&exists)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to check logout existence: %w", err)
+	}
+	return exists, nil
 }

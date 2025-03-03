@@ -153,7 +153,6 @@ func (r *SalesRepository) GetLogoutSummary(userID string) ([]models.LogoutSummar
 	if userID == "" {
 		return nil, fmt.Errorf("user_id is required to fetch logout summary")
 	}
-
 	rows, err := r.db.Query(`
 	SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
 	       total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
@@ -161,7 +160,7 @@ func (r *SalesRepository) GetLogoutSummary(userID string) ([]models.LogoutSummar
 	       how_was_today, work_location, logout_time, report_date
 	FROM logout_summaries
 	WHERE user_id = $1
-	AND report_date = CURRENT_DATE
+	AND DATE(report_date) = CURRENT_DATE
 	ORDER BY logout_time DESC
 	LIMIT 1
 `, userID)

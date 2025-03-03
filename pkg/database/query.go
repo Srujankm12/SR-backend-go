@@ -223,7 +223,7 @@ func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) 
 	       how_was_today, work_location, logout_time, report_date
 	FROM logout_summaries
 	WHERE user_id = $1
-	AND report_date = CURRENT_DATE
+	AND DATE(report_date) = CURRENT_DATE
 	ORDER BY logout_time DESC
 	LIMIT 1
 `, userID)

@@ -214,19 +214,22 @@ func (q *Query) InsertLogoutSummary(
 	return nil
 }
 func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) {
+	log.Printf("Fetching logout summary for user_id: %s", userID)
+
 	rows, err := q.db.Query(`
-		SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
-		       total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
-		       total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
-		       how_was_today, work_location, logout_time
-		FROM logout_summaries
-		WHERE user_id = $1
-		AND DATE(timezone('Asia/Kolkata', logout_time)) = DATE(timezone('Asia/Kolkata', NOW()))  -- Compare logout date in IST
-		ORDER BY logout_time DESC
-		LIMIT 1  -- Fetch latest logout of today
-	`, userID)
+	SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
+	       total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
+	       total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
+	       how_was_today, work_location, logout_time
+	FROM logout_summaries
+	WHERE user_id = $1
+	AND DATE(logout_time AT TIME ZONE 'Asia/Kolkata') = DATE(NOW() AT TIME ZONE 'Asia/Kolkata')
+	ORDER BY logout_time DESC
+	LIMIT 1
+`, userID)
 
 	if err != nil {
+		log.Printf("Query failed: %v", err) // Log query failure
 		return nil, fmt.Errorf("failed to fetch logout summary: %v", err)
 	}
 
@@ -241,15 +244,18 @@ func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) 
 			&summary.HowWasToday, &summary.WorkLocation, &summary.LogoutTime,
 		)
 		if err != nil {
+			log.Printf("Row scan failed: %v", err) // Log scan failure
 			return nil, fmt.Errorf("failed to scan logout summary: %v", err)
 		}
 		summaries = append(summaries, summary)
 	}
 
 	if len(summaries) == 0 {
+		log.Printf("No logout record found for user_id: %s", userID)
 		return nil, fmt.Errorf("no logout history found for user_id %s today", userID)
 	}
 
+	log.Printf("Fetched logout summary successfully for user_id: %s", userID)
 	return summaries, nil
 }
 

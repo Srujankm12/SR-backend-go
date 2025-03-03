@@ -213,7 +213,6 @@ func (q *Query) InsertLogoutSummary(
 
 	return nil
 }
-
 func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) {
 	rows, err := q.db.Query(`
 		SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
@@ -222,9 +221,9 @@ func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) 
 		       how_was_today, work_location, logout_time
 		FROM logout_summaries
 		WHERE user_id = $1
-		AND report_date = timezone('Asia/Kolkata', NOW())::DATE  -- Ensure correct timezone for filtering
-		ORDER BY logout_time DESC  -- Get the latest logout first
-		LIMIT 1  -- Fetch only the latest record
+		AND DATE(timezone('Asia/Kolkata', logout_time)) = DATE(timezone('Asia/Kolkata', NOW()))  -- Compare logout date in IST
+		ORDER BY logout_time DESC
+		LIMIT 1  -- Fetch latest logout of today
 	`, userID)
 
 	if err != nil {
@@ -248,7 +247,7 @@ func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) 
 	}
 
 	if len(summaries) == 0 {
-		return nil, fmt.Errorf("no logout history found for user_id %s", userID)
+		return nil, fmt.Errorf("no logout history found for user_id %s today", userID)
 	}
 
 	return summaries, nil

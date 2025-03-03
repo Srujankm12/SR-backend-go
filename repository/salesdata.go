@@ -155,16 +155,16 @@ func (r *SalesRepository) GetLogoutSummary(userID string) ([]models.LogoutSummar
 	}
 
 	rows, err := r.db.Query(`
-        SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
-               total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
-               total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
-               how_was_today, work_location, logout_time, report_date
-        FROM logout_summaries
-        WHERE user_id = $1
-        AND report_date = timezone('Asia/Kolkata', NOW())::DATE  
-        ORDER BY logout_time DESC
-        LIMIT 1  -- Ensures we only get the latest logout
-    `, userID)
+		SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
+		       total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
+		       total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
+		       how_was_today, work_location, logout_time
+		FROM logout_summaries
+		WHERE user_id = $1
+		AND DATE(timezone('Asia/Kolkata', logout_time)) = DATE(timezone('Asia/Kolkata', NOW()))  -- Compare logout date in IST
+		ORDER BY logout_time DESC
+		LIMIT 1  -- Fetch latest logout of today
+	`, userID)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch logout summary: %v", err)

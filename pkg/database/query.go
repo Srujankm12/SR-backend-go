@@ -220,10 +220,10 @@ func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) 
 	SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
 	       total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
 	       total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
-	       how_was_today, work_location, logout_time
+	       how_was_today, work_location, logout_time, report_date
 	FROM logout_summaries
 	WHERE user_id = $1
-	AND DATE(logout_time AT TIME ZONE 'Asia/Kolkata') = DATE(NOW() AT TIME ZONE 'Asia/Kolkata')
+	AND report_date = CURRENT_DATE
 	ORDER BY logout_time DESC
 	LIMIT 1
 `, userID)
@@ -241,7 +241,7 @@ func (q *Query) GetLogoutSummary(userID string) ([]models.LogoutSummary, error) 
 			&summary.UserID, &summary.EmpID, &summary.TotalNoOfVisits, &summary.TotalNoOfColdCalls, &summary.TotalNoOfFollowUps,
 			&summary.TotalEnquiryGenerated, &summary.TotalEnquiryValue, &summary.TotalOrderLost, &summary.TotalOrderLostValue,
 			&summary.TotalOrderWon, &summary.TotalOrderWonValue, &summary.CustomerFollowUpName, &summary.Notes, &summary.TomorrowGoals,
-			&summary.HowWasToday, &summary.WorkLocation, &summary.LogoutTime,
+			&summary.HowWasToday, &summary.WorkLocation, &summary.LogoutTime, &summary.ReportDate,
 		)
 		if err != nil {
 			log.Printf("Row scan failed: %v", err) // Log scan failure

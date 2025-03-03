@@ -158,10 +158,10 @@ func (r *SalesRepository) GetLogoutSummary(userID string) ([]models.LogoutSummar
 	SELECT user_id, emp_id, total_no_of_visits, total_no_of_cold_calls, total_no_of_follow_ups,
 	       total_enquiry_generated, total_enquiry_value, total_order_lost, total_order_lost_value,
 	       total_order_won, total_order_won_value, customer_follow_up_name, notes, tomorrow_goals,
-	       how_was_today, work_location, logout_time
+	       how_was_today, work_location, logout_time, report_date
 	FROM logout_summaries
 	WHERE user_id = $1
-	AND DATE(logout_time AT TIME ZONE 'Asia/Kolkata') = DATE(NOW() AT TIME ZONE 'Asia/Kolkata')
+	AND report_date = CURRENT_DATE
 	ORDER BY logout_time DESC
 	LIMIT 1
 `, userID)
